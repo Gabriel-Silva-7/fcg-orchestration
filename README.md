@@ -14,7 +14,7 @@ O estado atual é a fundação documental. Ainda não há Compose executável, s
 | `fcg-notifications-api` | Contatos e notificações simuladas |
 | `fcg-orchestration` | Ambiente integrado, configuração e procedimentos de reprodução |
 
-Cada serviço tem seu próprio código, build e banco. Bancos isolados poderão compartilhar a mesma instância PostgreSQL de desenvolvimento. A comunicação entre serviços será por RabbitMQ; nenhum banco de outro serviço deve ser acessado diretamente.
+Cada serviço mantém seu próprio código e build. A persistência pertence ao serviço dono; os bancos adotados por serviços diferentes são isolados e podem compartilhar a mesma instância PostgreSQL de desenvolvimento. A comunicação entre serviços será por RabbitMQ; nenhum banco de outro serviço deve ser acessado diretamente.
 
 ## Desenvolvimento e release
 
