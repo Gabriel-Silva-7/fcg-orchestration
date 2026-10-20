@@ -6,6 +6,8 @@ from support import Broker, ENDPOINTS, EVENTS, SUBSCRIPTIONS, segment
 
 VHOST = "/api/vhosts/%2Ffcg"
 BASE = "/api/"
+# Independent approved UTF-8 literal; no MassTransit envelope is fabricated here.
+PAYMENT_BODY = '{"orderId":"11111111-1111-1111-1111-111111111111","userId":"22222222-2222-2222-2222-222222222222","gameId":"33333333-3333-3333-3333-333333333333","price":44.93,"status":"Approved","processedAtUtc":"2026-10-19T12:34:58.123456Z"}'
 
 
 class RabbitMqTests(unittest.TestCase):
@@ -69,7 +71,7 @@ class RabbitMqDeliveryTests(unittest.TestCase):
 
     def publish(self, event="PaymentProcessedEvent", **overrides):
         payload = {"event": event, "orderId": "11111111-1111-1111-1111-111111111111", "price": 44.93}
-        body = json.dumps(payload, separators=(",", ":"))
+        body = PAYMENT_BODY if event == "PaymentProcessedEvent" else json.dumps(payload, separators=(",", ":"))
         result = self.checked_probe("publish-confirm", EXCHANGE="FCG.Contracts:" + event, MESSAGE_BODY=body, **overrides)
         self.assertEqual("AMQP 0-9-1", result.get("protocol"))
         self.assertTrue(result["confirmed"])
@@ -93,22 +95,27 @@ class RabbitMqDeliveryTests(unittest.TestCase):
         for queue,bodies in expected.items():
             for body in bodies:
                 received = self.get(queue)
-                self.assertEqual(body, received["body"])
+                self.assertEqual(PAYMENT_BODY if queue in ENDPOINTS[3:] else body, received["body"])
                 self.assertEqual("44444444-4444-4444-4444-444444444444", received["messageId"])
                 self.assertEqual("11111111-1111-1111-1111-111111111111", received["correlationId"])
                 self.assertTrue(received["persistent"])
             self.assertEqual(0, self.counts()[queue])
 
     def test_persistent_message_survives_idempotence_and_container_recreation(self):
-        self.b.require_bootstrap(); body = self.publish()
+        self.b.require_bootstrap(); self.publish()
         before = self.counts(); self.assertEqual(1, before[ENDPOINTS[3]]); self.assertEqual(1, before[ENDPOINTS[4]])
         self.b.require_bootstrap(); self.b.require_bootstrap(); self.assertEqual(before, self.counts())
         old, volume = self.b.container, self.b.volume
         self.b.recreate(); self.assertNotEqual(old, self.b.container); self.assertEqual(volume, self.b.volume)
         self.b.require_bootstrap(); self.assertEqual(before, self.counts())
-        self.assertEqual(body, self.get(ENDPOINTS[3])["body"])
-        self.assertEqual(1, self.counts()[ENDPOINTS[4]])
-        self.assertEqual(body, self.get(ENDPOINTS[4])["body"])
+        for index, queue in enumerate(ENDPOINTS[3:]):
+            received = self.get(queue)  # First consumption occurs AFTER recreation.
+            self.assertEqual(PAYMENT_BODY, received["body"])
+            self.assertEqual("44444444-4444-4444-4444-444444444444", received["messageId"])
+            self.assertEqual("11111111-1111-1111-1111-111111111111", received["correlationId"])
+            self.assertTrue(received["persistent"])
+            if index == 0:
+                self.assertEqual(1, self.counts()[ENDPOINTS[4]])
 
     def test_actual_masstransit_with_approved_contracts_has_compatible_topology(self):
         self.b.require_bootstrap()
