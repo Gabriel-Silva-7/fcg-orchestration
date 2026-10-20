@@ -195,6 +195,49 @@ def isolation(e):
     print("PASS isolation: all cross/admin/template connections and DDL privileges denied", flush=True)
 
 
+def acl(e):
+    false_ready = []
+    for role in ROLES:
+        cases = (
+            ("database-create", "postgres", f"REVOKE CREATE ON DATABASE {role} FROM {role}",
+             f"GRANT CREATE ON DATABASE {role} TO {role}", "CREATE SCHEMA acl_schema"),
+            ("schema-create", role, "REVOKE CREATE ON SCHEMA public FROM pg_database_owner",
+             "GRANT CREATE ON SCHEMA public TO pg_database_owner", "CREATE TABLE public.acl_new(id integer)"),
+            ("schema-usage", role, "REVOKE USAGE ON SCHEMA public FROM PUBLIC, pg_database_owner",
+             "GRANT USAGE ON SCHEMA public TO PUBLIC, pg_database_owner", "SELECT value FROM public.probe WHERE id=1"),
+        )
+        for name, database, revoke, grant, denied_sql in cases:
+            e.sql(revoke, database=database)
+            try:
+                denied = e.login(role, sql=denied_sql, check=False)
+                require(denied.returncode != 0 and "permission denied" in denied.stderr,
+                        f"ACL fixture did not deny {role}/{name}")
+                require(e.sql("SELECT value FROM public.probe WHERE id=1", database=role).stdout.strip() == "persistido",
+                        f"data was lost after ACL change in {role}/{name}")
+                ready = e.health()
+                print(f"OBSERVE acl {role}/{name}: ready={ready}, application denied, data preserved", flush=True)
+                if ready:
+                    false_ready.append(f"{role}/{name}")
+            finally:
+                e.sql(grant, database=database)
+            require(e.health(), f"readiness did not recover after restoring {role}/{name}")
+            schema = "acl_schema" if name == "database-create" else "public"
+            setup = "CREATE SCHEMA acl_schema;" if name == "database-create" else ""
+            cleanup = "DROP SCHEMA acl_schema;" if name == "database-create" else ""
+            data = e.login(role, sql=(setup + f"CREATE TABLE {schema}.acl_new(id integer PRIMARY KEY, value text);"
+                                     f"INSERT INTO {schema}.acl_new VALUES (1, 'created');"
+                                     f"UPDATE {schema}.acl_new SET value='ddl-dml' WHERE id=1;"
+                                     f"SELECT value FROM {schema}.acl_new WHERE id=1;"
+                                     f"DELETE FROM {schema}.acl_new WHERE id=1;"
+                                     f"DROP TABLE {schema}.acl_new;" + cleanup)).stdout.strip()
+            require(data == "ddl-dml", f"DDL/DML failed after restoring {role}/{name}")
+            require(e.login(role, sql="SELECT value FROM public.probe WHERE id=1").stdout.strip() == "persistido",
+                    f"original data unavailable after restoring {role}/{name}")
+            print(f"PASS ACL restoration {role}/{name}: ready, authenticated DDL/DML, original data preserved", flush=True)
+    require(not false_ready, "health incorrectly ready after ACL loss: " + ", ".join(false_ready))
+    print("PASS acl: database CREATE and public CREATE/USAGE independently checked in four databases", flush=True)
+
+
 def passwords(e):
     require(e.login("fcg_users").stdout.strip() == "1", "literal password failed")
     wrong = e.login("fcg_users", password="DEMO wrong password", check=False)
@@ -295,7 +338,7 @@ def init_errors(context, evidence):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--context", default="orbstack")
-    parser.add_argument("--case", choices=("all", "provision", "init-errors"), default="all")
+    parser.add_argument("--case", choices=("all", "provision", "init-errors", "acl"), default="all")
     parser.add_argument("--evidence-dir")
     args = parser.parse_args()
     if args.case == "init-errors":
@@ -305,8 +348,10 @@ def main():
     try:
         e.start()
         provision(e)
+        if args.case == "acl":
+            acl(e)
         if args.case == "all":
-            for case in (isolation, passwords, persistence, empty, partial):
+            for case in (isolation, passwords, acl, persistence, empty, partial):
                 case(e)
         log_result = e.command(e.docker + ["logs", e.container])
         logs = log_result.stdout + log_result.stderr
