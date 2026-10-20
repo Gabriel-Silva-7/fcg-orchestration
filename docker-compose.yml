@@ -1,0 +1,27 @@
+services:
+  postgres:
+    image: postgres:16@sha256:f1c3376c26f2609ab9f29f71f824103fe2fcd8ee0346485cb6122a4f93df6f94
+    entrypoint: ["/opt/fcg/postgres/entrypoint.sh"]
+    command: ["postgres"]
+    environment:
+      POSTGRES_USER: fcg_bootstrap
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      FCG_USERS_DB_PASSWORD: ${FCG_USERS_DB_PASSWORD:?FCG_USERS_DB_PASSWORD is required}
+      FCG_CATALOG_DB_PASSWORD: ${FCG_CATALOG_DB_PASSWORD:?FCG_CATALOG_DB_PASSWORD is required}
+      FCG_PAYMENTS_DB_PASSWORD: ${FCG_PAYMENTS_DB_PASSWORD:?FCG_PAYMENTS_DB_PASSWORD is required}
+      FCG_NOTIFICATIONS_DB_PASSWORD: ${FCG_NOTIFICATIONS_DB_PASSWORD:?FCG_NOTIFICATIONS_DB_PASSWORD is required}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/postgres:/opt/fcg/postgres:ro
+      - ./scripts/postgres/10-init.sh:/docker-entrypoint-initdb.d/10-fcg.sh:ro
+    healthcheck:
+      test: ["CMD", "/opt/fcg/postgres/healthcheck.sh"]
+      interval: 2s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+volumes:
+  postgres_data:

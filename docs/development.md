@@ -11,7 +11,7 @@ workspace/
   fcg-orchestration/
 ```
 
-Os nomes não exigem um caminho pessoal específico. Quando o Compose existir, seus contextos locais deverão aceitar caminhos explícitos, permitindo usar clones irmãos ou worktrees fora dessa estrutura. Esse mecanismo ainda não foi implementado; não há variáveis de Compose funcionais para configurar agora.
+Os nomes não exigem um caminho pessoal específico. O Compose atual provisiona somente PostgreSQL, conforme o [guia operacional](postgres.md). Contextos locais para as APIs serão acrescentados posteriormente e deverão aceitar caminhos explícitos para clones irmãos ou worktrees fora dessa estrutura.
 
 ## Worktrees e revisão
 
@@ -34,4 +34,4 @@ Os comandos de restore, testes, build e container pertencem ao README de cada se
 
 Executar cenários com nomes, portas e dados próprios. Registrar IDs de containers, rede e volumes antes da limpeza e remover somente os recursos da execução. Conservar os dados quando a prova exigir reinício; recriar um banco vazio não comprova recuperação.
 
-O procedimento integrado de desenvolvimento será acrescentado junto do Compose real, com pré-requisitos, variáveis e resultados observados. Até lá, este documento define convenções, sem alegar provisionamento pronto.
+O [guia PostgreSQL](postgres.md) documenta o provisionamento já executável. A jornada integrada entre serviços depende dos demais componentes.

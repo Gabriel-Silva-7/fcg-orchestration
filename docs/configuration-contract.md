@@ -1,6 +1,6 @@
 # Configuration and topology contract
 
-`config/identity.example.json` is a portable, non-secret deployment-contract bundle for the four services. `config/schema/identity.schema.json` uses JSON Schema 2020-12 and closes unknown service/config keys. These files are documentation of the configuration interface; no current host loads the bundle and no Compose, Kubernetes Secret, queue or database is provisioned here. Deployment must split the bundle per service and resolve `secret:` references before binding .NET configuration. Use double underscore for environment keys, e.g. `Jwt__Issuer`, `RabbitMq__VirtualHost`, `ConnectionStrings__Default`.
+`config/identity.example.json` is a portable, non-secret deployment-contract bundle for the four services. `config/schema/identity.schema.json` uses JSON Schema 2020-12 and closes unknown service/config keys. These files are documentation of the configuration interface; no current host loads the bundle and the bundle itself provisions no Kubernetes Secret, queue or database. The separate Compose provisions PostgreSQL as documented in [the PostgreSQL guide](postgres.md). Deployment must split the bundle per service and resolve `secret:` references before binding .NET configuration. Use double underscore for environment keys, e.g. `Jwt__Issuer`, `RabbitMq__VirtualHost`, `ConnectionStrings__Default`.
 
 | Owner | Own PostgreSQL database | Secret reference for ConnectionStrings:Default |
 |---|---|---|
