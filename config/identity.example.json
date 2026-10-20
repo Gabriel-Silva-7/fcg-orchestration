@@ -1,0 +1,85 @@
+{
+  "Users": {
+    "ConnectionStrings": {
+      "Default": "secret:users-db"
+    },
+    "RabbitMq": {
+      "Host": "rabbitmq",
+      "Port": 5672,
+      "VirtualHost": "/fcg",
+      "Username": "secret:users-rabbitmq-user",
+      "Password": "secret:users-rabbitmq-password"
+    },
+    "Jwt": {
+      "Issuer": "fcg-users",
+      "Audience": "fcg-api",
+      "Algorithm": "RS256",
+      "ExpirationMinutes": 15,
+      "ClockSkewSeconds": 0,
+      "PublicKeyPath": "/run/secrets/jwt-public.pem",
+      "PrivateKeyPath": "/run/secrets/users-jwt-private.pem"
+    }
+  },
+  "Catalog": {
+    "ConnectionStrings": {
+      "Default": "secret:catalog-db"
+    },
+    "RabbitMq": {
+      "Host": "rabbitmq",
+      "Port": 5672,
+      "VirtualHost": "/fcg",
+      "Username": "secret:catalog-rabbitmq-user",
+      "Password": "secret:catalog-rabbitmq-password"
+    },
+    "Jwt": {
+      "Issuer": "fcg-users",
+      "Audience": "fcg-api",
+      "Algorithm": "RS256",
+      "ExpirationMinutes": 15,
+      "ClockSkewSeconds": 0,
+      "PublicKeyPath": "/run/secrets/jwt-public.pem"
+    },
+    "Queues": {
+      "Identity": "fcg-catalog-identity",
+      "Payments": "fcg-catalog-payments"
+    }
+  },
+  "Payments": {
+    "ConnectionStrings": {
+      "Default": "secret:payments-db"
+    },
+    "RabbitMq": {
+      "Host": "rabbitmq",
+      "Port": 5672,
+      "VirtualHost": "/fcg",
+      "Username": "secret:payments-rabbitmq-user",
+      "Password": "secret:payments-rabbitmq-password"
+    },
+    "PaymentSimulation": {
+      "ApprovalLimit": 500,
+      "Delay": "00:00:02"
+    },
+    "Queues": {
+      "Orders": "fcg-payments-orders"
+    }
+  },
+  "Notifications": {
+    "ConnectionStrings": {
+      "Default": "secret:notifications-db"
+    },
+    "RabbitMq": {
+      "Host": "rabbitmq",
+      "Port": 5672,
+      "VirtualHost": "/fcg",
+      "Username": "secret:notifications-rabbitmq-user",
+      "Password": "secret:notifications-rabbitmq-password"
+    },
+    "Notifications": {
+      "PendingContactRetryInterval": "00:00:01"
+    },
+    "Queues": {
+      "Identity": "fcg-notifications-identity",
+      "Payments": "fcg-notifications-payments"
+    }
+  }
+}

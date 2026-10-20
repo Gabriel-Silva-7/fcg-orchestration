@@ -1,0 +1,430 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fcg.example.test/schema/identity-configuration.schema.json",
+  "title": "FCG deployment configuration contract (not bootstrap runtime binding)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "Users": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ConnectionStrings": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "Default": {
+              "type": "string",
+              "pattern": "^secret:[a-z][a-z0-9-]*$",
+              "description": "Only connection to own database fcg_users; resolve before binding runtime ConnectionStrings:Default."
+            }
+          },
+          "required": [
+            "Default"
+          ]
+        },
+        "RabbitMq": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "Host": {
+              "type": "string",
+              "minLength": 1,
+              "default": "rabbitmq"
+            },
+            "Port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535,
+              "default": 5672
+            },
+            "VirtualHost": {
+              "const": "/fcg"
+            },
+            "Username": {
+              "type": "string",
+              "pattern": "^secret:[a-z][a-z0-9-]*$",
+              "description": "Resolve per-service broker username into runtime RabbitMq:Username."
+            },
+            "Password": {
+              "type": "string",
+              "pattern": "^secret:[a-z][a-z0-9-]*$",
+              "description": "Resolve per-service password into runtime RabbitMq:Password."
+            }
+          },
+          "required": [
+            "Host",
+            "Port",
+            "VirtualHost",
+            "Username",
+            "Password"
+          ]
+        },
+        "Jwt": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "Issuer": {
+              "type": "string",
+              "minLength": 1,
+              "default": "fcg-users"
+            },
+            "Audience": {
+              "type": "string",
+              "minLength": 1,
+              "default": "fcg-api"
+            },
+            "Algorithm": {
+              "const": "RS256"
+            },
+            "ExpirationMinutes": {
+              "const": 15
+            },
+            "ClockSkewSeconds": {
+              "const": 0
+            },
+            "PublicKeyPath": {
+              "type": "string",
+              "minLength": 1,
+              "default": "/run/secrets/jwt-public.pem"
+            },
+            "PrivateKeyPath": {
+              "type": "string",
+              "minLength": 1,
+              "default": "/run/secrets/users-jwt-private.pem"
+            }
+          },
+          "required": [
+            "Issuer",
+            "Audience",
+            "Algorithm",
+            "ExpirationMinutes",
+            "ClockSkewSeconds",
+            "PublicKeyPath",
+            "PrivateKeyPath"
+          ]
+        }
+      },
+      "required": [
+        "ConnectionStrings",
+        "RabbitMq",
+        "Jwt"
+      ]
+    },
+    "Catalog": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ConnectionStrings": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "Default": {
+              "type": "string",
+              "pattern": "^secret:[a-z][a-z0-9-]*$",
+              "description": "Only connection to own database fcg_catalog; resolve before binding runtime ConnectionStrings:Default."
+            }
+          },
+          "required": [
+            "Default"
+          ]
+        },
+        "RabbitMq": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "Host": {
+              "type": "string",
+              "minLength": 1,
+              "default": "rabbitmq"
+            },
+            "Port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535,
+              "default": 5672
+            },
+            "VirtualHost": {
+              "const": "/fcg"
+            },
+            "Username": {
+              "type": "string",
+              "pattern": "^secret:[a-z][a-z0-9-]*$",
+              "description": "Resolve per-service broker username into runtime RabbitMq:Username."
+            },
+            "Password": {
+              "type": "string",
+              "pattern": "^secret:[a-z][a-z0-9-]*$",
+              "description": "Resolve per-service password into runtime RabbitMq:Password."
+            }
+          },
+          "required": [
+            "Host",
+            "Port",
+            "VirtualHost",
+            "Username",
+            "Password"
+          ]
+        },
+        "Jwt": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "Issuer": {
+              "type": "string",
+              "minLength": 1,
+              "default": "fcg-users"
+            },
+            "Audience": {
+              "type": "string",
+              "minLength": 1,
+              "default": "fcg-api"
+            },
+            "Algorithm": {
+              "const": "RS256"
+            },
+            "ExpirationMinutes": {
+              "const": 15
+            },
+            "ClockSkewSeconds": {
+              "const": 0
+            },
+            "PublicKeyPath": {
+              "type": "string",
+              "minLength": 1,
+              "default": "/run/secrets/jwt-public.pem"
+            }
+          },
+          "required": [
+            "Issuer",
+            "Audience",
+            "Algorithm",
+            "ExpirationMinutes",
+            "ClockSkewSeconds",
+            "PublicKeyPath"
+          ]
+        },
+        "Queues": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "Identity": {
+              "const": "fcg-catalog-identity"
+            },
+            "Payments": {
+              "const": "fcg-catalog-payments"
+            }
+          },
+          "required": [
+            "Identity",
+            "Payments"
+          ]
+        }
+      },
+      "required": [
+        "ConnectionStrings",
+        "RabbitMq",
+        "Jwt",
+        "Queues"
+      ]
+    },
+    "Payments": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ConnectionStrings": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "Default": {
+              "type": "string",
+              "pattern": "^secret:[a-z][a-z0-9-]*$",
+              "description": "Only connection to own database fcg_payments; resolve before binding runtime ConnectionStrings:Default."
+            }
+          },
+          "required": [
+            "Default"
+          ]
+        },
+        "RabbitMq": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "Host": {
+              "type": "string",
+              "minLength": 1,
+              "default": "rabbitmq"
+            },
+            "Port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535,
+              "default": 5672
+            },
+            "VirtualHost": {
+              "const": "/fcg"
+            },
+            "Username": {
+              "type": "string",
+              "pattern": "^secret:[a-z][a-z0-9-]*$",
+              "description": "Resolve per-service broker username into runtime RabbitMq:Username."
+            },
+            "Password": {
+              "type": "string",
+              "pattern": "^secret:[a-z][a-z0-9-]*$",
+              "description": "Resolve per-service password into runtime RabbitMq:Password."
+            }
+          },
+          "required": [
+            "Host",
+            "Port",
+            "VirtualHost",
+            "Username",
+            "Password"
+          ]
+        },
+        "PaymentSimulation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "ApprovalLimit": {
+              "type": "number",
+              "minimum": 0,
+              "multipleOf": 0.01,
+              "default": 500,
+              "description": "Upper bound and precision follow Payments-owned validated options; this schema does not duplicate business limits."
+            },
+            "Delay": {
+              "type": "string",
+              "pattern": "^(?:[0-9]+\\.)?[0-2][0-9]:[0-5][0-9]:[0-5][0-9](?:\\.[0-9]{1,7})?$",
+              "default": "00:00:02",
+              "description": "Invariant TimeSpan; positive and within bounds enforced by Payments options."
+            }
+          },
+          "required": [
+            "ApprovalLimit",
+            "Delay"
+          ]
+        },
+        "Queues": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "Orders": {
+              "const": "fcg-payments-orders"
+            }
+          },
+          "required": [
+            "Orders"
+          ]
+        }
+      },
+      "required": [
+        "ConnectionStrings",
+        "RabbitMq",
+        "PaymentSimulation",
+        "Queues"
+      ]
+    },
+    "Notifications": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "ConnectionStrings": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "Default": {
+              "type": "string",
+              "pattern": "^secret:[a-z][a-z0-9-]*$",
+              "description": "Only connection to own database fcg_notifications; resolve before binding runtime ConnectionStrings:Default."
+            }
+          },
+          "required": [
+            "Default"
+          ]
+        },
+        "RabbitMq": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "Host": {
+              "type": "string",
+              "minLength": 1,
+              "default": "rabbitmq"
+            },
+            "Port": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 65535,
+              "default": 5672
+            },
+            "VirtualHost": {
+              "const": "/fcg"
+            },
+            "Username": {
+              "type": "string",
+              "pattern": "^secret:[a-z][a-z0-9-]*$",
+              "description": "Resolve per-service broker username into runtime RabbitMq:Username."
+            },
+            "Password": {
+              "type": "string",
+              "pattern": "^secret:[a-z][a-z0-9-]*$",
+              "description": "Resolve per-service password into runtime RabbitMq:Password."
+            }
+          },
+          "required": [
+            "Host",
+            "Port",
+            "VirtualHost",
+            "Username",
+            "Password"
+          ]
+        },
+        "Notifications": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "PendingContactRetryInterval": {
+              "type": "string",
+              "pattern": "^(?:[0-9]+\\.)?[0-2][0-9]:[0-5][0-9]:[0-5][0-9](?:\\.[0-9]{1,7})?$",
+              "default": "00:00:01",
+              "description": "Positive invariant TimeSpan; future owner validates operational bounds. Default is one second, not a recovery-time guarantee."
+            }
+          },
+          "required": [
+            "PendingContactRetryInterval"
+          ]
+        },
+        "Queues": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "Identity": {
+              "const": "fcg-notifications-identity"
+            },
+            "Payments": {
+              "const": "fcg-notifications-payments"
+            }
+          },
+          "required": [
+            "Identity",
+            "Payments"
+          ]
+        }
+      },
+      "required": [
+        "ConnectionStrings",
+        "RabbitMq",
+        "Notifications",
+        "Queues"
+      ]
+    }
+  },
+  "required": [
+    "Users",
+    "Catalog",
+    "Payments",
+    "Notifications"
+  ]
+}
