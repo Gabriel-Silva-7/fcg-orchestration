@@ -1,0 +1,32 @@
+[
+  {
+    "file": "IdentitySnapshot.cs",
+    "source_commit": "6638f982559782b9c0ec8ed76bf5f271f4366b84",
+    "source_path": "src/FCG.Users.Application/Contracts/Identity/IdentitySnapshot.cs",
+    "sha256": "0def31387acd196f17e0d16f5be1aa07f49a73d48eeeacf3839fc97214f4b62b"
+  },
+  {
+    "file": "OrderPlacedEvent.cs",
+    "source_commit": "bf884a41293575680039b68be1100afb14c61e9b",
+    "source_path": "src/FCG.Payments/Contracts/Purchase/OrderPlacedEvent.cs",
+    "sha256": "82c3958367ec7aff2b29ef3b5e43436d9f2be7719a10db69c5ac785f4ea08ecc"
+  },
+  {
+    "file": "PaymentProcessedEvent.cs",
+    "source_commit": "bf884a41293575680039b68be1100afb14c61e9b",
+    "source_path": "src/FCG.Payments/Contracts/Purchase/PaymentProcessedEvent.cs",
+    "sha256": "833247910c1dfbc409c7b17a0e22a8871cce66649410f11f969144e8bb03b7ec"
+  },
+  {
+    "file": "PurchaseValues.cs",
+    "source_commit": "bf884a41293575680039b68be1100afb14c61e9b",
+    "source_path": "src/FCG.Payments/Contracts/Purchase/PurchaseValues.cs",
+    "sha256": "f580e655c7918b274b582d3e3ae2a1292166bc6fd32128c64824ccadd0802789"
+  },
+  {
+    "file": "PurchaseEventConverters.cs",
+    "source_commit": "bf884a41293575680039b68be1100afb14c61e9b",
+    "source_path": "src/FCG.Payments/Contracts/Purchase/PurchaseEventConverters.cs",
+    "sha256": "7d896f51979b006cc05c179e5575c86f8f5a1e765d6b1add78cd774c0cfc45f3"
+  }
+]

@@ -1,0 +1,7 @@
+.git
+**/bin
+**/obj
+**/__pycache__
+.env
+.env.*
+tests

@@ -23,5 +23,46 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+  rabbitmq:
+    image: rabbitmq:4.3.6-management@sha256:54cb013d76cd1fd6c0a0708f34062ad61c452bb6f016b434c6c33f1a765d2b58
+    hostname: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_BOOTSTRAP_USER:?RABBITMQ_BOOTSTRAP_USER is required}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_BOOTSTRAP_PASSWORD:?RABBITMQ_BOOTSTRAP_PASSWORD is required}
+      RABBITMQ_NODENAME: rabbit@rabbitmq
+      RABBITMQ_MNESIA_BASE: /var/lib/rabbitmq/mnesia
+    ports:
+      - "127.0.0.1:${RABBITMQ_PORT:-5672}:5672"
+      - "127.0.0.1:${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 2s
+      timeout: 10s
+      retries: 30
+      start_period: 10s
+  rabbitmq-bootstrap:
+    build:
+      context: .
+      dockerfile: scripts/rabbitmq/bootstrap/Dockerfile
+    restart: "no"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      RABBITMQ_MANAGEMENT_URL: http://rabbitmq:15672
+      RABBITMQ_BOOTSTRAP_TIMEOUT_SECONDS: ${RABBITMQ_BOOTSTRAP_TIMEOUT_SECONDS:-60}
+      RABBITMQ_BOOTSTRAP_USER: ${RABBITMQ_BOOTSTRAP_USER:?RABBITMQ_BOOTSTRAP_USER is required}
+      RABBITMQ_BOOTSTRAP_PASSWORD: ${RABBITMQ_BOOTSTRAP_PASSWORD:?RABBITMQ_BOOTSTRAP_PASSWORD is required}
+      FCG_USERS_RABBITMQ_USER: ${FCG_USERS_RABBITMQ_USER:?FCG_USERS_RABBITMQ_USER is required}
+      FCG_USERS_RABBITMQ_PASSWORD: ${FCG_USERS_RABBITMQ_PASSWORD:?FCG_USERS_RABBITMQ_PASSWORD is required}
+      FCG_CATALOG_RABBITMQ_USER: ${FCG_CATALOG_RABBITMQ_USER:?FCG_CATALOG_RABBITMQ_USER is required}
+      FCG_CATALOG_RABBITMQ_PASSWORD: ${FCG_CATALOG_RABBITMQ_PASSWORD:?FCG_CATALOG_RABBITMQ_PASSWORD is required}
+      FCG_PAYMENTS_RABBITMQ_USER: ${FCG_PAYMENTS_RABBITMQ_USER:?FCG_PAYMENTS_RABBITMQ_USER is required}
+      FCG_PAYMENTS_RABBITMQ_PASSWORD: ${FCG_PAYMENTS_RABBITMQ_PASSWORD:?FCG_PAYMENTS_RABBITMQ_PASSWORD is required}
+      FCG_NOTIFICATIONS_RABBITMQ_USER: ${FCG_NOTIFICATIONS_RABBITMQ_USER:?FCG_NOTIFICATIONS_RABBITMQ_USER is required}
+      FCG_NOTIFICATIONS_RABBITMQ_PASSWORD: ${FCG_NOTIFICATIONS_RABBITMQ_PASSWORD:?FCG_NOTIFICATIONS_RABBITMQ_PASSWORD is required}
 volumes:
   postgres_data:
+  rabbitmq_data:

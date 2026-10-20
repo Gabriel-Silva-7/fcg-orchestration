@@ -12,3 +12,5 @@
 .worktrees/
 .superpowers/
 docs/fase-2/
+
+**/__pycache__/

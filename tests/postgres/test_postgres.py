@@ -15,6 +15,14 @@ KEYS = ("POSTGRES_PASSWORD",) + tuple(f"FCG_{name[4:].upper()}_DB_PASSWORD" for 
 PASSWORDS = dict(zip(KEYS, ("DEMO bootstrap only", "DEMO quote' slash\\ dollar$ space",
                             "DEMO catalog password", "DEMO payments password", "DEMO notifications password")))
 LABEL = "io.fcg.postgres.test-run"
+# Compose interpolates the complete file even when starting only postgres.
+# Keep all broker credentials explicit and independent from a personal .env.
+RABBITMQ_TEST_ENV = {"RABBITMQ_BOOTSTRAP_USER": "fcg_bootstrap", "RABBITMQ_BOOTSTRAP_PASSWORD": "DEMO rabbit bootstrap",
+                     "RABBITMQ_PORT": "0", "RABBITMQ_MANAGEMENT_PORT": "0"}
+for _owner in ("USERS", "CATALOG", "PAYMENTS", "NOTIFICATIONS"):
+    RABBITMQ_TEST_ENV[f"FCG_{_owner}_RABBITMQ_USER"] = "fcg_" + _owner.lower()
+    RABBITMQ_TEST_ENV[f"FCG_{_owner}_RABBITMQ_PASSWORD"] = "DEMO rabbit " + _owner.lower()
+
 
 
 def require(condition, message):
@@ -43,13 +51,13 @@ class Environment:
         self.resources = {"container": {}, "volume": {}, "network": {}}
         self.container = None
         self.env = os.environ.copy()
-        for key in KEYS + ("POSTGRES_PORT", "COMPOSE_FILE", "COMPOSE_PROJECT_NAME", "COMPOSE_PROFILES"):
+        for key in KEYS + tuple(RABBITMQ_TEST_ENV) + ("POSTGRES_PORT", "COMPOSE_FILE", "COMPOSE_PROJECT_NAME", "COMPOSE_PROFILES"):
             self.env.pop(key, None)
         self.passwords = PASSWORDS.copy()
         self.write_env()
 
     def write_env(self, missing=None, empty=None):
-        values = dict(self.passwords, POSTGRES_PORT="0")
+        values = dict(RABBITMQ_TEST_ENV, **self.passwords, POSTGRES_PORT="0")
         lines = []
         for key, value in values.items():
             if key == missing:
