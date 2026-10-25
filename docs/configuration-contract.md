@@ -11,7 +11,7 @@
 
 Each credential must grant access only to its owner's database, including its outbox/inbox and local tables. One PostgreSQL instance may host all four local databases. Payments owns durable processing/result state in its own database. No runtime database credentials are shared, imported or used for recovery across services. `secret:` values are references with no credential material, not usable connection strings.
 
-All publishers use RabbitMq:Host, Port, VirtualHost, Username, Password. The development virtual host is `/fcg`, AMQP port 5672, host example `rabbitmq`. Resolve per-service username/password Secrets; no committed credentials. Topology is a future implementation contract:
+All publishers use RabbitMq:Host, Port, VirtualHost, Username, Password. The development virtual host is `/fcg`, AMQP port 5672, host example `rabbitmq`. Resolve per-service username/password Secrets; no committed credentials. The Compose bootstrap provisions the topology below before application consumers start. Application publisher/consumer adapters remain to be connected:
 
 | Publication (publisher) | Durable endpoint/queue | Consumer owner |
 |---|---|---|
