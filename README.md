@@ -40,3 +40,5 @@ Segredos reais, `.env` locais, credenciais privadas e artefatos de build não de
 Procedimentos de reset e limpeza precisam identificar os recursos criados pela própria execução. Não usar `docker system prune`, apagar volumes indiscriminadamente ou tratar reset de dados como etapa normal de inicialização.
 
 [Prova de concorrência e snapshot](docs/concurrency.md) com quatro hosts reais e barreiras PostgreSQL.
+
+[Prova de identidade e contato fora de ordem](docs/identity-ordering.md) com snapshots e eventos originais.
