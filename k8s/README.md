@@ -70,3 +70,52 @@ containers preexistentes e confere o kubeconfig pessoal. Não execute junto com 
 Compose completo na VM medida. Persistência validada é troca de Pod no mesmo
 cluster/node/PVC; não representa HA ou recuperação após perda do volume/cluster.
 Esta prova de infraestrutura não substitui a jornada dos quatro serviços no cluster.
+
+## Quatro serviços
+
+Os templates `k8s/configmap.yaml`, `secret.yaml`, `deployment.yaml` e `service.yaml`
+são mantidos no respectivo repositório Users/Catalog/Payments/Notifications. Depois
+de preparar fontes limpas, acrescente `--applications` ao render:
+
+```sh
+python3 scripts/kubernetes/render.py --env-file /caminho/privado/demo.env \
+  --output /caminho/privado/rendered --applications
+```
+
+A fase `04-applications` agrega essas fontes pelos SHAs completos e hashes dos
+arquivos de origem. Antes de cada apply, o helper reconstrói o conteúdo esperado
+com a configuração privada e rejeita divergência tanto da infraestrutura quanto
+dos serviços. A fase produtora também exige Job de topologia Complete. Não há
+segunda cópia manual de manifestos para manter sincronizada.
+
+Cada Deployment usa uma réplica, rollout com no máximo uma réplica adicional,
+startup/liveness em `/health/live`, readiness em `/health/ready`, UID1654 e Service
+ClusterIP80→8080. Credenciais e bootstrap ficam em Secrets; chaves JWT têm Secret
+separado, pública em Users/Catalog e privada apenas em Users. GSS local é desabilitado
+explicitamente sem alterar SslMode. Paths, filas e nomes de configuração seguem o
+mesmo contrato do Compose.
+
+A prova completa de implantação constrói/importa as quatro imagens, testa o gate
+negativo, executa cadastro/login e compras reais, confere UID/DNS/chaves e aplica
+uma revisão de configuração700 e depois500:
+
+```sh
+python3 scripts/kubernetes/verify-applications.py \
+  --rendered /caminho/privado/rendered --tools .tools/kubernetes \
+  --output /caminho/novo/application-evidence.json
+```
+
+Cada alteração é renderizada como novo pacote privado e aplicada nas fases, com
+rollout de infraestrutura, novo gate de topologia e rollout das aplicações. As
+mesmas senhas e chaves devem ser preservadas; o helper recusa rotação implícita.
+A configuração efetiva de Payments é observada no Pod e por uma compra600:
+Approved sob700, Rejected após restaurar500. Tokens anteriores, pedidos, pagamentos,
+aquisição44,93 e intenções Sent permanecem válidos. Reaplicar o último pacote sem
+mudanças não deve alterar geração dos Deployments ou seus Pods.
+
+O kubeconfig e o cache de descoberta são privados. O contexto dedicado recebe o
+namespace do projeto, permitindo comandos de apresentação com `KUBECONFIG` apontado
+para esse arquivo; o arquivo pessoal permanece inalterado. Os forwards são processos
+filhos próprios em loopback, fechados antes de trocar Pods e reconectados para a nova
+revisão. Recuperação automática e testes adicionais de lifecycle ficam na jornada
+Kubernetes. A prova termina removendo somente o cluster e os recursos que criou.

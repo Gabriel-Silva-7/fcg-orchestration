@@ -36,6 +36,60 @@ def load_environment(env_file,docker_context):
     return config,sources
 
 
+def infrastructure_values(record,config):
+    services=config['services'];pg=services['postgres']['environment'];mq=services['rabbitmq']['environment']
+    values={'NAMESPACE':record['namespace'],'RUN_ID':record['run_id'],'REVISION':record['revision'],'CONFIG_NAME':'infrastructure-'+record['revision'],'SCRIPTS_NAME':'postgres-scripts-'+record['revision'],
+            'PG_SECRET':'postgres-'+record['revision'],'MQ_SECRET':'rabbitmq-'+record['revision'],'BOOTSTRAP_SECRET':'bootstrap-'+record['revision'],
+            'PG_ADMIN_PASSWORD':pg['POSTGRES_PASSWORD'],'MQ_ADMIN_USER':mq['RABBITMQ_DEFAULT_USER'],'MQ_ADMIN_PASSWORD':mq['RABBITMQ_DEFAULT_PASS'],
+            'PG_ENTRYPOINT':(ROOT/'scripts/postgres/entrypoint.sh').read_text(),'PG_HEALTHCHECK':(ROOT/'scripts/postgres/healthcheck.sh').read_text(),'PG_INIT':(ROOT/'scripts/postgres/10-init.sh').read_text(),
+            'POSTGRES_IMAGE':record['images']['postgres'],'RABBITMQ_IMAGE':record['images']['rabbitmq'],'BOOTSTRAP_IMAGE':record['images']['bootstrap'],'DIAGNOSTIC_IMAGE':record['images']['diagnostic']}
+    for owner in OWNERS:
+        values[owner.upper()+'_DB_PASSWORD']=pg['FCG_'+owner.upper()+'_DB_PASSWORD']
+        values[owner.upper()+'_MQ_USER']=services[owner]['environment']['RabbitMq__Username']
+        values[owner.upper()+'_MQ_PASSWORD']=services[owner]['environment']['RabbitMq__Password']
+    return values
+
+
+def application_values(record,config,owner):
+    env=config['services'][owner]['environment'];revision=record['revision']
+    values={'NAMESPACE':record['namespace'],'CONFIG_NAME':owner+'-config-'+revision,'SECRET_NAME':owner+'-credentials-'+revision,
+            'KEYS_SECRET_NAME':owner+'-keys-'+revision,'RENDER_REVISION':revision,'SOURCE_SHA':record['sources'][owner]['sha'],'IMAGE':record['images'][owner],
+            'GSS_MODE':env['PGGSSENCMODE'],'CONNECTION_STRING':env['ConnectionStrings__Default'],'MQ_USER':env['RabbitMq__Username'],'MQ_PASSWORD':env['RabbitMq__Password']}
+    if owner in ('users','catalog'):
+        values.update({'JWT_ISSUER':env['Jwt__Issuer'],'JWT_AUDIENCE':env['Jwt__Audience'],'SWAGGER_ENABLED':env['Swagger__Enabled']})
+        for volume in config['services'][owner]['volumes']:
+            if volume['target']=='/run/secrets/public.pem':values['PUBLIC_KEY_PEM']=Path(volume['source']).read_text()
+            if owner=='users' and volume['target']=='/run/secrets/private.pem':values['PRIVATE_KEY_PEM']=Path(volume['source']).read_text()
+    if owner=='users':
+        for variable,name in [('Enabled','BOOTSTRAP_ENABLED'),('Email','BOOTSTRAP_EMAIL'),('Password','BOOTSTRAP_PASSWORD'),('PlayerEmail','BOOTSTRAP_PLAYER_EMAIL'),('PlayerPassword','BOOTSTRAP_PLAYER_PASSWORD')]:values[name]=env['AdminBootstrap__'+variable]
+    if owner=='payments':values.update({'APPROVAL_LIMIT':env['PaymentSimulation__ApprovalLimit'],'PAYMENT_DELAY':env['PaymentSimulation__Delay']})
+    return values
+
+
+def application_text(record,config,owner,name):
+    source=Path(record['sources'][owner]['path'])/'k8s'/name
+    if not source.resolve().is_relative_to(Path(record['sources'][owner]['path']).resolve()):raise ValueError('Template escaped its service repository')
+    template=string.Template(source.read_text());values=application_values(record,config,owner)
+    return source,template.substitute({key:json.dumps(values[key],ensure_ascii=True) for key in template.get_identifiers()})
+
+
+def verify_rendered(output):
+    record=json.loads((output/'RENDER.json').read_text());config,sources=load_environment(Path(record['env_file']),record['docker_context'])
+    if record['root']!=str(ROOT) or sources['services']!=record['sources']:raise ValueError('Rendered sources or orchestration checkout differ')
+    values=infrastructure_values(record,config)
+    phase_for={'namespace':'00-namespace','config':'01-infrastructure','secrets':'01-infrastructure','postgres':'01-infrastructure','rabbitmq':'01-infrastructure','bootstrap':'02-bootstrap','diagnostic':'03-diagnostics'}
+    for name,expected in record['template_sha256'].items():
+        source=ROOT/name
+        if hashlib.sha256(source.read_bytes()).hexdigest()!=expected:raise ValueError('Infrastructure template changed after rendering')
+        template=string.Template(source.read_text());selected={key:json.dumps(values[key],ensure_ascii=True) for key in template.get_identifiers()};selected['REVISION']=record['revision']
+        if (output/phase_for[source.stem]/source.name).read_text()!=template.substitute(selected):raise ValueError('Infrastructure aggregate differs from verified source/configuration')
+    for owner,files in record.get('application_sources',{}).items():
+        for name,digest in files.items():
+            source,expected=application_text(record,config,owner,name)
+            if hashlib.sha256(source.read_bytes()).hexdigest()!=digest or (output/'04-applications'/(owner+'-'+name)).read_text()!=expected:raise ValueError('Application aggregate differs from verified source/configuration')
+    return record
+
+
 def render(args):
     output=args.output.resolve();config,sources=load_environment(args.env_file.resolve(),args.docker_context)
     suffix=config['name'].removeprefix('fcg-demo-')
@@ -48,16 +102,7 @@ def render(args):
                    'rabbitmq':namespace+'-rabbitmq:source-'+VERSIONS['rabbitmq'].split(':')[-1][:12],
                    'diagnostic':namespace+'-diagnostic:source-'+VERSIONS['diagnostic'].split(':')[-1][:12],
                    'bootstrap':namespace+'-bootstrap:'+run(['git','-C',str(ROOT),'rev-parse','HEAD'])})
-    services=config['services'];pg=services['postgres']['environment'];mq=services['rabbitmq']['environment']
-    values={'NAMESPACE':namespace,'RUN_ID':suffix,'REVISION':revision,'CONFIG_NAME':'infrastructure-'+revision,'SCRIPTS_NAME':'postgres-scripts-'+revision,
-            'PG_SECRET':'postgres-'+revision,'MQ_SECRET':'rabbitmq-'+revision,'BOOTSTRAP_SECRET':'bootstrap-'+revision,
-            'PG_ADMIN_PASSWORD':pg['POSTGRES_PASSWORD'],'MQ_ADMIN_USER':mq['RABBITMQ_DEFAULT_USER'],'MQ_ADMIN_PASSWORD':mq['RABBITMQ_DEFAULT_PASS'],
-            'PG_ENTRYPOINT':(ROOT/'scripts/postgres/entrypoint.sh').read_text(),'PG_HEALTHCHECK':(ROOT/'scripts/postgres/healthcheck.sh').read_text(),'PG_INIT':(ROOT/'scripts/postgres/10-init.sh').read_text(),
-            'POSTGRES_IMAGE':images['postgres'],'RABBITMQ_IMAGE':images['rabbitmq'],'BOOTSTRAP_IMAGE':images['bootstrap'],'DIAGNOSTIC_IMAGE':images['diagnostic']}
-    for owner in OWNERS:
-        values[owner.upper()+'_DB_PASSWORD']=pg['FCG_'+owner.upper()+'_DB_PASSWORD']
-        values[owner.upper()+'_MQ_USER']=services[owner]['environment']['RabbitMq__Username']
-        values[owner.upper()+'_MQ_PASSWORD']=services[owner]['environment']['RabbitMq__Password']
+    values=infrastructure_values({'namespace':namespace,'revision':revision,'run_id':suffix,'images':images},config)
     phases={'00-namespace':['namespace'],'01-infrastructure':['config','secrets','postgres','rabbitmq'],'02-bootstrap':['bootstrap'],'03-diagnostics':['diagnostic']}
     hashes={}
     for phase,names in phases.items():
@@ -73,6 +118,15 @@ def render(args):
             'run_id':suffix,'revision':revision,'bootstrap_job':'rabbitmq-bootstrap-'+revision,'root':str(ROOT),'root_sha':run(['git','-C',str(ROOT),'rev-parse','HEAD']),
             'root_dirty':bool(run(['git','-C',str(ROOT),'status','--porcelain'])),'env_file':str(args.env_file.resolve()),'docker_context':args.docker_context,'images':images,
             'image_sources':{'postgres':VERSIONS['postgres'],'rabbitmq':VERSIONS['rabbitmq'],'diagnostic':VERSIONS['diagnostic']},'node_image':VERSIONS['node'],'sources':sources['services'],'template_sha256':hashes,'phases':list(phases)}
+    if getattr(args,'applications',False):
+        directory=output/'04-applications';directory.mkdir(mode=0o700);record['application_sources']={}
+        for owner in OWNERS:
+            record['application_sources'][owner]={}
+            for name in ('configmap.yaml','secret.yaml','deployment.yaml','service.yaml'):
+                source,text=application_text(record,config,owner,name)
+                target=directory/(owner+'-'+name);target.write_text(text);target.chmod(0o600)
+                record['application_sources'][owner][name]=hashlib.sha256(source.read_bytes()).hexdigest()
+        record['phases'].append('04-applications')
     (output/'RENDER.json').write_text(json.dumps(record,indent=2)+'\n');(output/'RENDER.json').chmod(0o600)
     print('Private phases rendered: '+str(output))
     print('Namespace '+namespace+'; source templates are not directly applicable.')
@@ -80,7 +134,7 @@ def render(args):
 
 
 def main():
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--env-file',type=Path,required=True);parser.add_argument('--output',type=Path,required=True);parser.add_argument('--docker-context',default='orbstack')
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--env-file',type=Path,required=True);parser.add_argument('--output',type=Path,required=True);parser.add_argument('--docker-context',default='orbstack');parser.add_argument('--applications',action='store_true')
     try:render(parser.parse_args())
     except Exception as error:print('Kubernetes rendering failed: '+type(error).__name__,file=sys.stderr);return 1
     return 0

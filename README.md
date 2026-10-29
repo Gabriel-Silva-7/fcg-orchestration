@@ -2,7 +2,7 @@
 
 Este repositório executa a jornada integrada de Users, Catalog, Payments e Notifications por eventos RabbitMQ. Cada serviço tem código, build e persistência próprios.
 
-O Compose já provisiona PostgreSQL 16 com quatro bancos e credenciais isoladas, volume persistente e readiness de provisionamento. Consulte o [guia PostgreSQL](docs/postgres.md) para iniciar, diagnosticar e executar os testes reais. RabbitMQ persistente e o gate de topologia também estão disponíveis no [guia RabbitMQ](docs/rabbitmq.md). As quatro aplicações fazem parte do Compose; o [guia integrado](docs/compose.md) explica fontes, chaves, inicialização e teste real. A infraestrutura Kubernetes e sua prova de persistência estão em preparação no [guia Kind](k8s/README.md); a implantação dos quatro serviços e sua jornada entram nos incrementos seguintes.
+O Compose já provisiona PostgreSQL 16 com quatro bancos e credenciais isoladas, volume persistente e readiness de provisionamento. Consulte o [guia PostgreSQL](docs/postgres.md) para iniciar, diagnosticar e executar os testes reais. RabbitMQ persistente e o gate de topologia também estão disponíveis no [guia RabbitMQ](docs/rabbitmq.md). As quatro aplicações fazem parte do Compose; o [guia integrado](docs/compose.md) explica fontes, chaves, inicialização e teste real. A infraestrutura Kubernetes e sua prova de persistência estão em preparação no [guia Kind](k8s/README.md); os quatro serviços possuem manifestos próprios e prova de implantação/configuração, com regressão e recuperação completas na jornada Kubernetes.
 
 ## Repositórios e responsabilidades
 

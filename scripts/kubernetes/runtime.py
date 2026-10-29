@@ -29,7 +29,7 @@ class Runtime:
         self.root=Path(self.meta['root']);self.name=self.meta['cluster'];self.namespace=self.meta['namespace'];self.context=self.meta['context']
         self.kubeconfig=self.directory/'kubeconfig';self.docker=['docker','--context',self.meta['docker_context']]
         self.env={**os.environ,'DOCKER_CONTEXT':self.meta['docker_context'],'KIND_EXPERIMENTAL_PROVIDER':'docker','KUBECONFIG':str(self.kubeconfig)}
-        self.kind=[str(self.tools/'kind')];self.kubectl=[str(self.tools/'kubectl'),'--kubeconfig',str(self.kubeconfig),'--context',self.context,'--namespace',self.namespace]
+        self.kind=[str(self.tools/'kind')];self.kubectl=[str(self.tools/'kubectl'),'--kubeconfig',str(self.kubeconfig),'--context',self.context,'--namespace',self.namespace,'--cache-dir',str(self.directory/'kubectl-cache')]
         self.node=None;self.volume_records={};self.network_record=None;self.image_records={}
         self.personal=Path.home()/'.kube/config';self.personal_hash=hashlib.sha256(self.personal.read_bytes()).hexdigest() if self.personal.exists() else None
         self.baseline_containers=self.run(self.docker+['ps','-aq']).stdout.split()
@@ -78,12 +78,38 @@ class Runtime:
         ensure(set(self.image_records)==set(references),'Exported image references incomplete')
         return archive
 
+    def build_applications(self):
+        references=[]
+        for owner,source in self.meta['sources'].items():
+            reference=self.meta['images'][owner]
+            self.run(self.docker+['build','-t',reference,source['path']],timeout=300);references.append(reference)
+        archive=self.directory/'application-images.tar'
+        self.run(self.docker+['image','save','--platform','linux/arm64','-o',str(archive),*references],timeout=180)
+        with tarfile.open(archive) as saved:
+            for item in json.load(saved.extractfile('manifest.json')):
+                content=saved.extractfile(item['Config']).read();config=json.loads(content)
+                for reference in item['RepoTags']:
+                    if reference not in references:continue
+                    source=json.loads(self.run(self.docker+['image','inspect',reference]).stdout)[0]
+                    ensure(config['architecture']=='arm64' and config['os']=='linux','Application image platform differs')
+                    owner=next(name for name in self.meta['sources'] if self.meta['images'][name]==reference)
+                    self.image_records[reference]={'docker_index_id':source['Id'],'exported_config_digest':'sha256:'+hashlib.sha256(content).hexdigest(),'rootfs':config['rootfs'],'entrypoint':config['config'].get('Entrypoint'),'source_sha':self.meta['sources'][owner]['sha']}
+        ensure(all(reference in self.image_records for reference in references),'Application image archive incomplete')
+        return archive
+
+    def load_archive(self,archive):self.run(self.kind+['load','image-archive',str(archive),'--name',self.name],timeout=180)
+
+    def applications(self):
+        self.apply_phase('04-applications')
+        for owner in self.meta['sources']:self.kube('rollout','status','deployment/'+owner,'--timeout=180s')
+
     def create(self,archive):
         config=self.directory/'kind-config.json';config.write_text(json.dumps({'kind':'Cluster','apiVersion':'kind.x-k8s.io/v1alpha4','networking':{'apiServerAddress':'127.0.0.1'},'nodes':[{'role':'control-plane'}]}));config.chmod(0o600)
         # Record even a failed/partial creation so cleanup can verify any owned node.
         try:self.run(self.kind+['create','cluster','--name',self.name,'--image',self.meta['node_image'],'--kubeconfig',str(self.kubeconfig),'--config',str(config),'--wait','120s'],timeout=180)
         finally:self.capture_node()
         self.kubeconfig.chmod(0o600)
+        self.kube('config','set-context',self.context,'--namespace',self.namespace)
         self.run(self.kind+['load','image-archive',str(archive),'--name',self.name],timeout=180)
         self.kube('wait','--for=condition=Ready','nodes','--all','--timeout=120s')
         versions=json.loads(self.kube('version','-o','json').stdout)
@@ -108,6 +134,11 @@ class Runtime:
         self.ownership_file.write_text(json.dumps({'node':self.node,'volumes':self.volume_records,'network':self.network_record,'baseline_containers':self.baseline_containers},indent=2)+'\n');self.ownership_file.chmod(0o600)
 
     def apply_phase(self,name):
+        from render import verify_rendered
+        verify_rendered(self.directory)
+        if name=='04-applications':
+            response=self.kube('get','job',self.meta['bootstrap_job'],'-o','json',check=False)
+            ensure(response.returncode==0 and any(x['type']=='Complete' and x['status']=='True' for x in json.loads(response.stdout).get('status',{}).get('conditions',[])),'Topology bootstrap must Complete before applying producers')
         directory=self.directory/name
         ensure(directory.is_dir(),'Rendered phase missing')
         if name!='00-namespace':self.kube('apply','--dry-run=server','-f',str(directory))
