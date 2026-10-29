@@ -5,3 +5,11 @@
 .env
 .env.*
 tests
+
+.local
+.sources
+.tools
+.worktrees
+docs/fase-2
+**/*.pem
+**/kubeconfig

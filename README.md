@@ -2,7 +2,7 @@
 
 Este repositório executa a jornada integrada de Users, Catalog, Payments e Notifications por eventos RabbitMQ. Cada serviço tem código, build e persistência próprios.
 
-O Compose já provisiona PostgreSQL 16 com quatro bancos e credenciais isoladas, volume persistente e readiness de provisionamento. Consulte o [guia PostgreSQL](docs/postgres.md) para iniciar, diagnosticar e executar os testes reais. RabbitMQ persistente e o gate de topologia também estão disponíveis no [guia RabbitMQ](docs/rabbitmq.md). As quatro aplicações fazem parte do Compose; o [guia integrado](docs/compose.md) explica fontes, chaves, inicialização e teste real. Manifestos e validação Kubernetes continuam pendentes.
+O Compose já provisiona PostgreSQL 16 com quatro bancos e credenciais isoladas, volume persistente e readiness de provisionamento. Consulte o [guia PostgreSQL](docs/postgres.md) para iniciar, diagnosticar e executar os testes reais. RabbitMQ persistente e o gate de topologia também estão disponíveis no [guia RabbitMQ](docs/rabbitmq.md). As quatro aplicações fazem parte do Compose; o [guia integrado](docs/compose.md) explica fontes, chaves, inicialização e teste real. A infraestrutura Kubernetes e sua prova de persistência estão em preparação no [guia Kind](k8s/README.md); a implantação dos quatro serviços e sua jornada entram nos incrementos seguintes.
 
 ## Repositórios e responsabilidades
 
@@ -27,7 +27,7 @@ Desenvolvimento usa checkouts locais limpos em contextos explícitos, selecionad
 - SDK .NET 10.0.400 para os serviços, conforme seus próprios `global.json`.
 - Docker com Compose; OrbStack é a engine usada na validação local.
 - PostgreSQL 16 e RabbitMQ 4.3.6-management; ambas as imagens já estão fixadas por digest no Compose.
-- Kubernetes local com Kind como alvo. O procedimento e a versão ainda serão validados; não é pré-requisito para ler este repositório.
+- Kubernetes local: Kind0.33.0/kubectl1.37.0/node1.37.0 fixados, preparação e prova de infraestrutura no [guia Kind](k8s/README.md).
 
 Os [procedimentos de recuperação](docs/recovery.md) separam replay local de negócio, retomada do dispatcher e redrive de transporte.
 
