@@ -143,11 +143,22 @@ class Journey:
         code,page=self.http('users','/api/v1/admin/users?search='+urllib.parse.quote(email),token=admin)
         ensure(code==200 and page['totalCount']==1 and page['items'][0]['isDeleted'],'Deleted identity remains observable to administrator')
 
+    def topology_gate(self):
+        state=json.loads(subprocess.run(['docker','--context',self.args.docker_context,'inspect',self.ids['rabbitmq-bootstrap']],capture_output=True,text=True,check=True).stdout)[0]['State']
+        ensure(state['Status']=='exited' and state['ExitCode']==0,'Topology gate must have completed successfully')
+
+    def deployment_evidence(self):
+        images={}
+        for owner in (*OWNERS,'rabbitmq-bootstrap','postgres','rabbitmq'):
+            obj=json.loads(subprocess.run(['docker','--context',self.args.docker_context,'inspect',self.ids[owner]],capture_output=True,text=True,check=True).stdout)[0]
+            ensure(obj['Config']['Labels']['com.docker.compose.project']==self.project,'Resource project identity changed')
+            images[owner]={'container':obj['Id'],'image':obj['Image'],'reference':obj['Config']['Image']}
+        return images
+
     def execute(self):
         for owner in OWNERS:
             poll(lambda:self.http(owner,'/health/ready')[0],lambda code:code==200,owner+' readiness')
-        state=json.loads(subprocess.run(['docker','--context',self.args.docker_context,'inspect',self.ids['rabbitmq-bootstrap']],capture_output=True,text=True,check=True).stdout)[0]['State']
-        ensure(state['Status']=='exited' and state['ExitCode']==0,'Topology gate must have completed successfully')
+        self.topology_gate()
         env=self.services['users']['environment']
         ensure(env['AdminBootstrap__Enabled']=='true','E2E needs an explicitly provisioned demonstration administrator')
         admin=self.login(env['AdminBootstrap__Email'],env['AdminBootstrap__Password'])
@@ -212,17 +223,13 @@ class Journey:
         for owner in OWNERS:
             logs=self.logs(owner)
             ensure(all(value.lower() not in logs.lower() and urllib.parse.quote(value,safe='').lower() not in logs.lower() for value in self.secrets),'Production logs must omit literal and URL-encoded full contact and credentials: '+owner)
-        images={}
-        for owner in (*OWNERS,'rabbitmq-bootstrap','postgres','rabbitmq'):
-            obj=json.loads(subprocess.run(['docker','--context',self.args.docker_context,'inspect',self.ids[owner]],capture_output=True,text=True,check=True).stdout)[0]
-            ensure(obj['Config']['Labels']['com.docker.compose.project']==self.project,'Resource project identity changed')
-            images[owner]={'container':obj['Id'],'image':obj['Image'],'reference':obj['Config']['Image']}
-        result={'status':'passed','mode':'complete-four-real-services','run_id':self.run_id,'project':self.project,
+        images=self.deployment_evidence()
+        result={'status':'passed','mode':getattr(self,'execution_mode','complete-four-real-services'),'run_id':self.run_id,'project':self.project,
                 'at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'user_id':user_id,'other_user_id':other_id,
                 'games':games,'orders':orders,'images':images,
                 'checks':['all-ready','topology-gate','users-token-catalog-admin','welcome-console-and-sent',
                           'approved-library-confirmation','rejected-without-acquisition-or-confirmation','owner-isolation','private-logs','profile-password-contact-convergence','administrative-version-and-block-unblock-delete','distributed-authorization','promotions44.93-and-crud-history'],
-                'limits':'Operational recovery and advanced interleavings are covered separately by INT02/INT05/INT06; Kubernetes by INT03.'}
+                'limits':getattr(self,'validation_limits','Operational recovery and advanced interleavings are covered separately by INT02/INT05/INT06; Kubernetes by INT03.')}
         if self.args.output:
             self.args.output.parent.mkdir(parents=True,exist_ok=True)
             with self.args.output.open('x') as stream: stream.write(json.dumps(result,indent=2)+'\n')
@@ -230,14 +237,28 @@ class Journey:
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--target',choices=['compose'],required=True)
-    parser.add_argument('--env-file',type=Path,required=True)
+    parser.add_argument('--target',choices=['compose','k8s'],required=True)
+    parser.add_argument('--env-file',type=Path)
+    parser.add_argument('--rendered',type=Path)
+    parser.add_argument('--tools',type=Path,default=ROOT/'.tools/kubernetes')
     parser.add_argument('--docker-context',default='orbstack')
     parser.add_argument('--output',type=Path)
     try:
         args=parser.parse_args()
         ensure(args.output is None or not args.output.exists(),'Evidence output already exists; choose a new path to avoid stale results')
-        Journey(args).execute()
+        if args.target=='compose':
+            ensure(args.env_file is not None,'Compose requires --env-file');Journey(args).execute()
+        else:
+            ensure(args.rendered is not None,'Kubernetes requires --rendered')
+            sys.path.insert(0,str(ROOT/'scripts/kubernetes'))
+            from runtime import Runtime
+            from render import load_environment,verify_rendered
+            from journey import KubeJourney
+            verify_rendered(args.rendered);runtime=Runtime(args.rendered,args.tools)
+            config,_=load_environment(Path(runtime.meta['env_file']),runtime.meta['docker_context'])
+            app=KubeJourney(runtime,config);app.args=args
+            try:app.execute()
+            finally:app.close()
     except (JourneyFailure, OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
         # No subprocess output, response payload, config or original exception values in diagnostics.
         message=str(error) if isinstance(error,JourneyFailure) else type(error).__name__

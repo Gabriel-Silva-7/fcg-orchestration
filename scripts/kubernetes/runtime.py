@@ -32,7 +32,7 @@ class Runtime:
         self.kind=[str(self.tools/'kind')];self.kubectl=[str(self.tools/'kubectl'),'--kubeconfig',str(self.kubeconfig),'--context',self.context,'--namespace',self.namespace,'--cache-dir',str(self.directory/'kubectl-cache')]
         self.node=None;self.volume_records={};self.network_record=None;self.image_records={}
         self.personal=Path.home()/'.kube/config';self.personal_hash=hashlib.sha256(self.personal.read_bytes()).hexdigest() if self.personal.exists() else None
-        self.baseline_containers=self.run(self.docker+['ps','-aq']).stdout.split()
+        self.baseline_containers=self.run(self.docker+['ps','-aq','--no-trunc']).stdout.split()
         self.baseline_volumes=self.run(self.docker+['volume','ls','-q']).stdout.split()
         self.baseline_kind_network=self.run(self.docker+['network','ls','-q','--filter','name=^kind$']).stdout.strip()
         self.ownership_file=self.directory/'OWNERSHIP.json'
@@ -117,7 +117,7 @@ class Runtime:
         return versions
 
     def capture_node(self):
-        ids=self.run(self.docker+['ps','-aq','--filter','label=io.x-k8s.kind.cluster='+self.name]).stdout.split()
+        ids=self.run(self.docker+['ps','-aq','--no-trunc','--filter','label=io.x-k8s.kind.cluster='+self.name]).stdout.split()
         if not ids:return
         ensure(len(ids)==1,'Expected one owned control-plane node')
         obj=json.loads(self.run(self.docker+['inspect',ids[0]]).stdout)[0]
@@ -132,6 +132,15 @@ class Runtime:
             network=json.loads(self.run(self.docker+['network','inspect',networks['kind']['NetworkID']]).stdout)[0]
             self.network_record={'id':network['Id'],'created':network['Created'],'preexisting':bool(self.baseline_kind_network)}
         self.ownership_file.write_text(json.dumps({'node':self.node,'volumes':self.volume_records,'network':self.network_record,'baseline_containers':self.baseline_containers},indent=2)+'\n');self.ownership_file.chmod(0o600)
+
+    def attach_owned(self):
+        record=json.loads(self.ownership_file.read_text());node=record['node']
+        current=json.loads(self.run(self.docker+['inspect',node['id']]).stdout)[0]
+        ensure(current['Created']==node['created'] and current['Config']['Labels'].get('io.x-k8s.kind.cluster')==self.name,'Saved cluster ownership differs')
+        self.node=node;self.volume_records=record['volumes'];self.network_record=record['network']
+        self.baseline_containers=[cid for cid in self.baseline_containers if cid!=node['id']]
+        evidence=self.directory/'LIVE.json'
+        if evidence.exists():self.image_records=json.loads(evidence.read_text()).get('images',{})
 
     def apply_phase(self,name):
         from render import verify_rendered
@@ -155,20 +164,20 @@ class Runtime:
             current=json.loads(self.run(self.docker+['inspect',self.node['id']]).stdout)[0]
             ensure(current['Created']==self.node['created'] and current['Config']['Labels'].get('io.x-k8s.kind.cluster')==self.name,'Owned node identity changed')
             self.run(self.kind+['delete','cluster','--name',self.name],timeout=120)
-            ensure(not self.run(self.docker+['ps','-aq','--filter','label=io.x-k8s.kind.cluster='+self.name]).stdout.strip(),'Owned node still exists')
+            ensure(not self.run(self.docker+['ps','-aq','--no-trunc','--filter','label=io.x-k8s.kind.cluster='+self.name]).stdout.strip(),'Owned node still exists')
             for name,record in self.volume_records.items():
                 if record['preexisting']:continue
                 result=self.run(self.docker+['volume','inspect',name],check=False)
                 if not result.returncode:
                     ensure(json.loads(result.stdout)[0]['CreatedAt']==record['created'],'Owned volume identity changed')
-                    ensure(not self.run(self.docker+['ps','-aq','--filter','volume='+name]).stdout.strip(),'Volume is now in use')
+                    ensure(not self.run(self.docker+['ps','-aq','--no-trunc','--filter','volume='+name]).stdout.strip(),'Volume is now in use')
                     self.run(self.docker+['volume','rm',name])
             if self.network_record and not self.network_record['preexisting']:
                 result=self.run(self.docker+['network','inspect',self.network_record['id']],check=False)
                 if not result.returncode:
                     network=json.loads(result.stdout)[0];ensure(network['Created']==self.network_record['created'] and not network['Containers'],'Shared network acquired other owners')
                     self.run(self.docker+['network','rm',self.network_record['id']])
-        current=set(self.run(self.docker+['ps','-aq']).stdout.split());ensure(set(self.baseline_containers)<=current,'A preexisting container disappeared')
+        current=set(self.run(self.docker+['ps','-aq','--no-trunc']).stdout.split());ensure(set(self.baseline_containers)<=current,'A preexisting container disappeared')
         personal_hash=hashlib.sha256(self.personal.read_bytes()).hexdigest() if self.personal.exists() else None
         ensure(personal_hash==self.personal_hash,'Personal kubeconfig changed')
         return {'complete':True,'personal_kubeconfig_unchanged':True,'preexisting_containers_preserved':True,'node':self.node,'volumes':self.volume_records,'network':self.network_record}
