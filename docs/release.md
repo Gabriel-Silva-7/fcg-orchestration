@@ -1,6 +1,6 @@
 # Identificação e reprodução de uma release
 
-Ainda não existe release integrada ou manifesto executável neste repositório. Esta página define os dados que deverão acompanhar a primeira entrega reproduzível.
+Há scripts executáveis de preparação, Compose, Kubernetes e jornada integrada. Eles registram fontes e imagens da execução local. Ainda é necessário empacotar e conferir a reprodução a partir de cinco clones limpos antes de chamar essa combinação de release; publicação e integração em `main` permanecem etapas separadas.
 
 ## Revisões de origem
 
@@ -15,7 +15,7 @@ Não usar `main`, `latest` ou só um nome de tag como prova de imutabilidade. A 
 
 ## Contextos de build
 
-Desenvolvimento pode selecionar diretórios locais, incluindo worktrees. Para reprodução por quem avalia, o futuro ambiente deve funcionar a partir da orquestração e de fontes verificáveis fixadas por revisão, sem depender do diretório pessoal do autor ou de arquivos não versionados essenciais.
+Desenvolvimento pode selecionar diretórios locais, incluindo worktrees. Para reprodução por quem avalia, o pacote de reprodução deve funcionar a partir da orquestração e de fontes verificáveis fixadas por revisão, sem depender do diretório pessoal do autor ou de arquivos não versionados essenciais.
 
 As bases de imagens e dependências também precisam estar fixadas. Qualquer override local deve ser explícito e registrado na evidência; um build com overrides não demonstra o comportamento do padrão sem eles.
 
