@@ -11,7 +11,7 @@ workspace/
   fcg-orchestration/
 ```
 
-Os nomes não exigem um caminho pessoal específico. O Compose atual provisiona PostgreSQL e RabbitMQ, incluindo o bootstrap da topologia do broker, conforme os guias de [PostgreSQL](postgres.md) e [RabbitMQ](rabbitmq.md). Contextos locais para as APIs serão acrescentados posteriormente e deverão aceitar caminhos explícitos para clones irmãos ou worktrees fora dessa estrutura.
+Os nomes não exigem um caminho pessoal específico. O Compose atual provisiona PostgreSQL e RabbitMQ, incluindo o bootstrap da topologia do broker, conforme os guias de [PostgreSQL](postgres.md) e [RabbitMQ](rabbitmq.md). As quatro aplicações aceitam caminhos explícitos para clones irmãos ou worktrees. O [guia Compose](compose.md) mostra preparação, manifesto de fontes e E2E real sem depender dessa organização de pastas.
 
 ## Worktrees e revisão
 
@@ -34,4 +34,4 @@ Os comandos de restore, testes, build e container pertencem ao README de cada se
 
 Executar cenários com nomes, portas e dados próprios. Registrar IDs de containers, rede e volumes antes da limpeza e remover somente os recursos da execução. Conservar os dados quando a prova exigir reinício; recriar um banco vazio não comprova recuperação.
 
-Os guias de [PostgreSQL](postgres.md) e [RabbitMQ](rabbitmq.md) documentam o provisionamento já executável. A jornada integrada entre serviços depende dos adaptadores de publicação/consumo e da inclusão das APIs no Compose.
+Os guias de [PostgreSQL](postgres.md) e [RabbitMQ](rabbitmq.md) documentam o provisionamento já executável. A primeira jornada integrada está disponível no Compose com os adaptadores dos quatro hosts; capacidades herdadas restantes e autorização distribuída entram na validação completa posterior.
