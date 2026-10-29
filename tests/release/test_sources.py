@@ -24,10 +24,12 @@ class SourcePackageTests(unittest.TestCase):
             release.git(path, 'config', 'user.name', 'Source fixture')
             release.git(path, 'remote', 'add', 'origin', 'https://example.invalid/' + owner + '.git')
             (path / 'README.md').write_text(owner)
-            (path / '.gitignore').write_text('.env\n')
+            (path / '.gitignore').write_text('.env\n.tools/\n')
             release.git(path, 'add', '.')
             release.git(path, 'commit', '-qm', 'fixture')
             (path / '.env').write_text('PRIVATE_IGNORED_FIXTURE')
+            (path / '.tools').mkdir()
+            (path / '.tools/kubectl').write_text('IGNORED_DOWNLOADED_TOOL')
             self.sources[owner] = path
         self.package = self.root / 'package'
 
@@ -42,6 +44,7 @@ class SourcePackageTests(unittest.TestCase):
             destination = output / entry['directory']
             self.assertEqual(entry['sha'], manifest['repositories'][owner]['sha'])
             self.assertFalse((destination / '.env').exists())
+            self.assertFalse((destination / '.tools').exists())
             self.assertEqual('', release.git(destination, 'status', '--porcelain'))
             self.assertEqual('HEAD', release.git(destination, 'rev-parse', '--abbrev-ref', 'HEAD'))
             self.assertEqual(manifest['repositories'][owner]['origin'], release.git(destination, 'remote', 'get-url', 'origin'))

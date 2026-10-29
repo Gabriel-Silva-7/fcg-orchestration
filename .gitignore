@@ -17,3 +17,6 @@ docs/fase-2/
 
 .local/
 .sources/
+
+# Local verified tool downloads; never source input or release content.
+.tools/
