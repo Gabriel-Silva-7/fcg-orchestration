@@ -38,3 +38,5 @@ Consulte [scripts](scripts/README.md) e [Kubernetes](k8s/README.md) para a divis
 Segredos reais, `.env` locais, credenciais privadas e artefatos de build não devem ser versionados. As credenciais públicas em `.env.example` são identificadas como DEMO e não podem ser usadas em outro ambiente. Pagamentos e emissão de e-mails no console são simulados; não há cobrança ou envio externo.
 
 Procedimentos de reset e limpeza precisam identificar os recursos criados pela própria execução. Não usar `docker system prune`, apagar volumes indiscriminadamente ou tratar reset de dados como etapa normal de inicialização.
+
+[Prova de concorrência e snapshot](docs/concurrency.md) com quatro hosts reais e barreiras PostgreSQL.
