@@ -29,6 +29,8 @@ Desenvolvimento usa checkouts locais limpos em contextos explícitos, selecionad
 - PostgreSQL 16 e RabbitMQ 4.3.6-management; ambas as imagens já estão fixadas por digest no Compose.
 - Kubernetes local com Kind como alvo. O procedimento e a versão ainda serão validados; não é pré-requisito para ler este repositório.
 
+Os [procedimentos de recuperação](docs/recovery.md) separam replay local de negócio, retomada do dispatcher e redrive de transporte.
+
 Consulte [scripts](scripts/README.md) e [Kubernetes](k8s/README.md) para a divisão de responsabilidades. Os READMEs de cada serviço descrevem os comandos que já funcionam naquele repositório. Cada execução do E2E registra IDs únicos e imagens efetivas; o manifesto local não equivale a release pública ou integração em `main`.
 
 ## Configuração e dados

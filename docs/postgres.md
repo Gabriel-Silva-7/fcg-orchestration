@@ -68,3 +68,9 @@ python3 tests/postgres/test_postgres.py --context orbstack
 A suíte usa apenas a biblioteca padrão Python, projeto aleatório, porta loopback efêmera e volume próprios. Verifica autenticação com senha contendo aspas/barra/dólar/espaço, senha errada, quatro donos com DDL/DML, conexões cruzadas/manutenção negadas, flags de role, perda separada de CREATE no banco e CREATE/USAGE no schema `public` (com recuperação explícita e DDL/DML autenticados nos quatro bancos), senhas vazias, persistência na recriação, ausência de rotação por ambiente e provisionamento parcial. Um segundo ambiente força falha real de init com role já existente e verifica que stdout/stderr/logs não expõem senha, enquanto o diagnóstico e dados parciais permanecem.
 
 `--case provision` roda a primeira verificação; `--case acl` foca as permissões de banco/schema; `--case init-errors` foca o erro seguro. `--evidence-dir <diretório>` preserva os IDs/labels capturados e logs redigidos, sem gravar configurações de container com senhas. A limpeza confere identidade e labels antes de remover cada recurso capturado, incluindo os criados em falhas; não toca recursos preexistentes. Esses testes não provam a integração das APIs, RabbitMQ, migrations ou Kubernetes.
+
+O Compose local explicita `PGGSSENCMODE=disable` nos quatro hosts porque as roles
+autenticam com senha. Isso evita a tentativa de carregar a biblioteca Kerberos
+opcional no runtime mínimo. `SslMode` não é alterado por essa configuração. A
+seleção é `FCG_GSS_ENCRYPTION_MODE`, e a conexão completa continua sendo o override
+explícito para outro perfil de autenticação.

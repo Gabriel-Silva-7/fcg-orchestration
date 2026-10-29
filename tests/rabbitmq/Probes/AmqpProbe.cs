@@ -24,9 +24,11 @@ internal static class AmqpProbe
         {
             var properties = new BasicProperties
             {
-                Persistent = true, ContentType = "application/json",
-                MessageId = "44444444-4444-4444-4444-444444444444",
-                CorrelationId = "11111111-1111-1111-1111-111111111111"
+                Persistent = true, ContentType = Environment.GetEnvironmentVariable("CONTENT_TYPE") ?? "application/json",
+                Headers = Environment.GetEnvironmentVariable("MESSAGE_HEADER") is { } header
+                    ? new Dictionary<string, object?> { ["fixture"] = Encoding.UTF8.GetBytes(header) } : null,
+                MessageId = Environment.GetEnvironmentVariable("MESSAGE_ID") ?? "44444444-4444-4444-4444-444444444444",
+                CorrelationId = Environment.GetEnvironmentVariable("CORRELATION_ID") ?? "11111111-1111-1111-1111-111111111111"
             };
             await channel.BasicPublishAsync(Environment.GetEnvironmentVariable("EXCHANGE") ?? "FCG.Contracts:PaymentProcessedEvent",
                 Environment.GetEnvironmentVariable("ROUTING_KEY") ?? "", true, properties,
@@ -48,7 +50,7 @@ internal static class AmqpProbe
                 ?? throw new InvalidOperationException("queue_empty");
             await channel.BasicAckAsync(result.DeliveryTag, false, ct);
             return new { body = Encoding.UTF8.GetString(result.Body.Span), messageId = result.BasicProperties.MessageId,
-                correlationId = result.BasicProperties.CorrelationId, persistent = result.BasicProperties.Persistent };
+                correlationId = result.BasicProperties.CorrelationId, persistent = result.BasicProperties.Persistent, headers = result.BasicProperties.Headers };
         }
         throw new ArgumentException("unknown_command");
     }

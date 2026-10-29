@@ -74,6 +74,7 @@ services:
         condition: service_completed_successfully
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      PGGSSENCMODE: ${FCG_GSS_ENCRYPTION_MODE:-disable}
       ConnectionStrings__Default: Host=postgres;Database=fcg_users;Username=fcg_users;Password=${FCG_USERS_DB_PASSWORD:?FCG_USERS_DB_PASSWORD is required};Timeout=5;Command Timeout=10
       Database__MigrateOnStartup: "true"
       RabbitMq__Host: rabbitmq
@@ -121,6 +122,7 @@ services:
         condition: service_completed_successfully
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      PGGSSENCMODE: ${FCG_GSS_ENCRYPTION_MODE:-disable}
       ConnectionStrings__Default: Host=postgres;Database=fcg_catalog;Username=fcg_catalog;Password=${FCG_CATALOG_DB_PASSWORD:?FCG_CATALOG_DB_PASSWORD is required};Timeout=5;Command Timeout=10
       Database__MigrateOnStartup: "true"
       RabbitMq__Host: rabbitmq
@@ -156,6 +158,7 @@ services:
         condition: service_completed_successfully
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      PGGSSENCMODE: ${FCG_GSS_ENCRYPTION_MODE:-disable}
       ConnectionStrings__Default: Host=postgres;Database=fcg_payments;Username=fcg_payments;Password=${FCG_PAYMENTS_DB_PASSWORD:?FCG_PAYMENTS_DB_PASSWORD is required};Timeout=5;Command Timeout=10
       Database__MigrateOnStartup: "true"
       RabbitMq__Host: rabbitmq
@@ -179,6 +182,7 @@ services:
         condition: service_completed_successfully
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      PGGSSENCMODE: ${FCG_GSS_ENCRYPTION_MODE:-disable}
       ConnectionStrings__Default: Host=postgres;Database=fcg_notifications;Username=fcg_notifications;Password=${FCG_NOTIFICATIONS_DB_PASSWORD:?FCG_NOTIFICATIONS_DB_PASSWORD is required};Timeout=5;Command Timeout=10
       Database__MigrateOnStartup: "true"
       RabbitMq__Host: rabbitmq

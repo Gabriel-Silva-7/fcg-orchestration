@@ -43,7 +43,7 @@ def prepare(args):
               'ADMIN_BOOTSTRAP_PASSWORD':secrets.token_hex(20)+'!Aa1',
               'ADMIN_BOOTSTRAP_PLAYER_EMAIL':'player@example.com',
               'ADMIN_BOOTSTRAP_PLAYER_PASSWORD':secrets.token_hex(20)+'!Aa1',
-              'PAYMENT_APPROVAL_LIMIT':'500.00', 'PAYMENT_DELAY':'00:00:02'}
+              'PAYMENT_APPROVAL_LIMIT':'500.00', 'PAYMENT_DELAY':'00:00:02', 'FCG_GSS_ENCRYPTION_MODE':'disable'}
     for owner in OWNERS:
         prefix='FCG_'+owner.upper()
         values.update({prefix+'_SOURCE':sources[owner]['path'], prefix+'_IMAGE':project+'-'+owner+':'+sources[owner]['sha'],
