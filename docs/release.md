@@ -26,3 +26,64 @@ Antes de chamar uma combinação de release, registrar os comandos executados e 
 O registro deve distinguir testes locais dos serviços, execução integrada em Compose e execução em Kubernetes. Nenhuma dessas provas substitui automaticamente as outras.
 
 Publicar repositórios, imagens ou tags e submeter a entrega são ações separadas da preparação local. Essa etapa somente será documentada como concluída após sua execução e verificação.
+
+## Pacote local de fontes para revisão
+
+Enquanto os commits aguardam revisão e publicação, `scripts/release.py` permite
+reproduzir a combinação sem depender de refs remotas ainda indisponíveis. É um
+pacote de fontes local, não uma release publicada. Requer Python3 e Git; cada
+origem precisa estar limpa e ter URL HTTPS sem credenciais. O script da orquestração
+também precisa estar commitado, pois seu próprio HEAD integra o pacote.
+
+```sh
+python3 scripts/release.py pack \
+  --users ../fcg-users-api --catalog ../fcg-catalog-api \
+  --payments ../fcg-payments-api --notifications ../fcg-notifications-api \
+  --output /caminho/privado/pacote-novo
+python3 scripts/release.py restore \
+  --manifest /caminho/privado/pacote-novo/sources.json \
+  --output /caminho/privado/clones-novos
+```
+
+O pacote contém `sources.json` e cinco bundles Git autossuficientes, com o HEAD
+completo e sua história alcançável. Não copia arquivos ignorados, `.env`, chaves,
+artefatos de build ou diretórios pessoais. O manifesto registra URL, SHA completo,
+nome de bundle e SHA256; ele deve ser obtido por um canal confiável. Hash confirma
+integridade em relação ao manifesto, não autentica um manifesto alterado junto
+com os bundles. Revise também o conteúdo já commitado antes de compartilhar.
+
+Restore confere todos os hashes/heads antes de criar o destino, faz clones novos
+com checkout detached e origem URL restabelecida. Recusa destinos existentes e
+fontes sujas, sem limpar arquivos de outro trabalho. Uma falha intermediária pode
+deixar um diretório parcial para diagnóstico; inspecione-o e use outro destino,
+sem tratar falha como autorização de apagar dados. `RESTORED.json` identifica a
+combinação clonada, sem caminhos absolutos no manifesto de distribuição.
+
+## Ensaio a partir dos clones
+
+Entre no clone novo de `fcg-orchestration`. As quatro pastas irmãs restauradas são
+os contextos de build. Execute exatamente a preparação e a jornada do
+[guia Compose](compose.md), preservando `sources.json` e as saídas dos dois E2Es.
+Pare os containers do projeto antes de preparar o cluster, pois a validação local
+não pressupõe capacidade para executar as duas stacks completas simultaneamente.
+
+Para Kind, gere **outro** ambiente com `prepare-local.py --output .local/kind-demo`,
+usando os mesmos quatro clones. Prepare ferramentas e renderize como no
+[guia Kubernetes](../k8s/README.md), com `--applications`. Execute `deploy.py up`,
+confira nodes/Pods/readiness e rode duas jornadas `scripts/e2e.sh --target k8s`
+com saídas distintas. Remova somente o cluster identificado pelo próprio helper.
+
+Registre hashes do manifesto e dos bundles, SHAs dos cinco clones, comandos,
+resultados, plataforma, fontes e cadeia das imagens usadas. Os E2Es precisam
+corresponder à combinação que será gravada no vídeo. Dependências públicas e
+imagens base podem usar cache local; nenhum `.env` anterior ou imagem privada de
+aplicação pode ser requisito para executar o procedimento.
+
+Os testes de seleção e integridade do pacote usam Git real e diretórios descartáveis:
+
+```sh
+python3 -m unittest discover -s tests/release -v
+```
+
+Acesso do avaliador aos repositórios/commits, publicação de imagens, vídeo e envio
+do relatório dependem de execução e conferência separadas, após autorização.
