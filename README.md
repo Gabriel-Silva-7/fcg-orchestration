@@ -1,6 +1,6 @@
 # Fiap Cloud Games — ambiente integrado
 
-Este repositório executa a primeira jornada integrada de Users, Catalog, Payments e Notifications por eventos RabbitMQ. Cada serviço tem código, build e persistência próprios.
+Este repositório executa a jornada integrada de Users, Catalog, Payments e Notifications por eventos RabbitMQ. Cada serviço tem código, build e persistência próprios.
 
 O Compose já provisiona PostgreSQL 16 com quatro bancos e credenciais isoladas, volume persistente e readiness de provisionamento. Consulte o [guia PostgreSQL](docs/postgres.md) para iniciar, diagnosticar e executar os testes reais. RabbitMQ persistente e o gate de topologia também estão disponíveis no [guia RabbitMQ](docs/rabbitmq.md). As quatro aplicações fazem parte do Compose; o [guia integrado](docs/compose.md) explica fontes, chaves, inicialização e teste real. Manifestos e validação Kubernetes continuam pendentes.
 
@@ -20,7 +20,7 @@ Cada serviço mantém seu próprio código e build. A persistência pertence ao 
 
 O [guia de desenvolvimento](docs/development.md) descreve a organização local e o uso de worktrees. O [guia de release](docs/release.md) define como uma combinação de versões deve ser identificada e verificada.
 
-Desenvolvimento usa checkouts locais limpos em contextos explícitos, selecionados por `scripts/prepare-local.py`. A entrega reproduzível deverá fixar revisões completas dos quatro serviços e digests das imagens, sem depender de `main` ou `latest`. PostgreSQL, RabbitMQ e imagens de build/runtime do bootstrap estão fixadas por digest; suas variáveis consumidas estão em `.env.example`, com valores exclusivamente DEMO. O E2E básico cobre cadastro/boas-vindas e compra aprovada/rejeitada com biblioteca/confirmação, usando os quatro hosts reais. Autorização distribuída e demais capacidades herdadas serão validadas na jornada completa posterior.
+Desenvolvimento usa checkouts locais limpos em contextos explícitos, selecionados por `scripts/prepare-local.py`. A entrega reproduzível deverá fixar revisões completas dos quatro serviços e digests das imagens, sem depender de `main` ou `latest`. PostgreSQL, RabbitMQ e imagens de build/runtime do bootstrap estão fixadas por digest; suas variáveis consumidas estão em `.env.example`, com valores exclusivamente DEMO. O E2E cobre cadastro/boas-vindas, perfil/senha/administração, autorização por estado propagado, promoções, CRUD e compra aprovada/rejeitada com histórico e confirmação, usando os quatro hosts reais. Recuperação operacional e interleavings avançados têm provas próprias.
 
 ## Ambiente
 

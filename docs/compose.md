@@ -79,16 +79,17 @@ Não publique a privada nem altere chaves a cada partida.
 O script obtém token administrativo pelo login real de Users e cria jogos via HTTP
 Catalog. Para cada execução, cadastra dois titulares com dados únicos, observa
 Welcome como `Sent` no banco Notifications e emissão `[E-MAIL SIMULADO]` no console.
-O usuário compra um jogo49,90 (Approved) e um600,00 (Rejected) sob limite500.
+O usuário compra um jogo59,90 com promoções sobrepostas de10% e25%, cujo preço
+calculado é44,93 (Approved), e outro600,00 (Rejected) sob limite500.
 As requisições usam o preço do servidor e aceitam202 antes do resultado assíncrono.
 Polling limitado observa o estado terminal mesmo se Pending já tiver passado.
 
 Confere a decisão real de Payments e o mesmo instante no Catalog, a cópia independente
-em Notifications, biblioteca com um único jogo/preço49,90 e confirmação emitida para
+em Notifications, biblioteca com um único jogo/preço44,93 e confirmação emitida para
 o aprovado. Após observar Rejected nos dois consumidores, exige ausência de aquisição
 e de intenção/log de confirmação para esse pedido. Outro titular não vê pedidos nem
 biblioteca; detalhe alheio404; tokenUser não cria jogo403. Os logs são conferidos sem
-contato completo, senha ou token. IDs de execução/UserId/OrderId correlacionam a prova.
+contato completo literal ou codificado na URL, senha ou token. IDs de execução/UserId/OrderId correlacionam a prova.
 
 As consultas SQL de verificação usam a role de cada banco, somente leitura. Nenhum
 serviço lê o banco de outro serviço e o teste não cria fatos por SQL ou publica
@@ -97,9 +98,18 @@ interpretada como e-mail externo. O dispatcher documenta a possível repetição
 console após crash, pois console e banco não compartilham transação.
 
 Execute duas vezes para comprovar isolamento entre execuções. O E2E cria dados e
-preserva volumes inclusive em falha, para diagnóstico. O modo básico não comprova
-estado distribuído de autorização, perfil/admin/senha, CRUD completo ou promoções;
-essas capacidades entram na jornada completa após seus incrementos. O atraso/limite
+preserva volumes inclusive em falha, para diagnóstico. A jornada também verifica
+GET/PATCH do próprio perfil, propagação do contato para Notifications, alteração
+de senha com senha antiga recusada e token previamente emitido preservado. A lista
+administrativa fornece versão para bloquear/desbloquear; versão antiga retorna409.
+O mesmo JWT perde/recupera acesso conforme o estado recebido no Catalog. Exclusão
+lógica repetida permanece204 e o registro continua visível na lista administrativa.
+Após aquisição, edição e desativação do jogo mantêm histórico44,93 com título atual;
+DELETE repetido204 e PUT inativo404. Antes de usar uma identidade recém-criada,
+o script aguarda a projeção ativa com prazo, pois readiness não prova sua entrega.
+Logins que recebem429 respeitam o limite padrão e aguardam a janela dentro de
+um prazo de90s; o cenário não aumenta o limite de produção. Recuperação operacional
+e interleavings avançados são validados em provas separadas. O atraso/limite
 financeiro esperado aqui é o padrão2s/500; alterá-lo exige ajustar o cenário.
 
 ## Saúde, diagnóstico e parada

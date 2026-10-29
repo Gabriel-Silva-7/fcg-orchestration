@@ -13,6 +13,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+import urllib.parse
 import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -33,7 +34,7 @@ def poll(read, accept, label, seconds=90):
 
 class Journey:
     def __init__(self, args):
-        self.args=args; self.run_id=uuid.uuid4().hex
+        self.args=args; self.run_id=uuid.uuid4().hex; self.accounts={}
         # Explicit env-file is authoritative; never let inherited shell variables silently select another project/source/secret.
         self.env=os.environ.copy()
         for line in args.env_file.read_text().splitlines():
@@ -79,7 +80,7 @@ class Journey:
     def logs(self, owner): return self.command(['logs','--no-color',owner])
 
     def login(self, email, password):
-        status, body=self.http('users','/api/v1/auth/login','POST',{'email':email,'password':password})
+        status, body=poll(lambda:self.http('users','/api/v1/auth/login','POST',{'email':email,'password':password}),lambda result:result[0] not in (0,429,503),'login within configured rate window')
         ensure(status==200,'Real Users login failed')
         token=body['accessToken']; self.secrets.extend([email,password,token]); return token
 
@@ -87,7 +88,7 @@ class Journey:
         email='e2e-'+self.run_id+'-'+suffix+'@example.com'; password=secrets.token_hex(16)+'!Aa1'
         code,body=self.http('users','/api/v1/auth/register','POST',{'name':'E2E '+suffix,'email':email,'password':password})
         ensure(code==201,'Unique real HTTP registration failed')
-        self.secrets.extend([email,password]); return body['id'], self.login(email,password)
+        self.secrets.extend([email,password]); self.accounts[body['id']]=(email,password); return body['id'], self.login(email,password)
 
     def notification(self, kind, business_id):
         ensure(kind in ('Welcome','PurchaseConfirmation'),'Unsupported assertion kind')
@@ -97,6 +98,50 @@ class Journey:
         poll(lambda:self.db('notifications',sql),lambda count:count=='1',kind+' persisted Sent')
         logs=poll(lambda:self.logs('notifications'),lambda text:any('[E-MAIL SIMULADO] '+kind in line and business_id in line for line in text.splitlines()),kind+' emitted in console')
         return True
+
+    def authorization_ready(self, token):
+        poll(lambda:self.http('catalog','/api/v1/me/orders',token=token)[0],lambda code:code==200,'Catalog active identity projection')
+
+    def profile_password(self, user_id, user):
+        code,profile=self.http('users','/api/v1/me',token=user)
+        ensure(code==200 and profile['id']==user_id,'Own profile must be available through Users')
+        email,password=self.accounts[user_id]
+        updated='e2e-'+self.run_id+'-updated@example.com'; new_password=secrets.token_hex(16)+'!Aa1'
+        self.secrets.extend([updated,new_password])
+        code,changed=self.http('users','/api/v1/me','PATCH',{'name':'E2E revised','email':updated},user)
+        ensure(code==200 and changed['id']==user_id and changed['email']==updated,'Own profile update must preserve identity')
+        poll(lambda:self.db('notifications',f"SELECT count(*) FROM \"UserContacts\" WHERE \"UserId\"='{user_id}' AND \"Email\"='{updated}'"),lambda count:count=='1','updated notification contact')
+        ensure(self.http('users','/api/v1/me/password','PATCH',{'currentPassword':'Wrong!Aa123','newPassword':new_password},user)[0]==400,'Wrong current password must be rejected')
+        ensure(self.http('users','/api/v1/me/password','PATCH',{'currentPassword':password,'newPassword':new_password},user)[0]==204,'Own password must change')
+        status,_=poll(lambda:self.http('users','/api/v1/auth/login','POST',{'email':updated,'password':password}),lambda result:result[0] not in (0,429,503),'old password attempt within rate window')
+        ensure(status==401,'Old password must stop authenticating')
+        self.login(updated,new_password)
+        ensure(self.http('users','/api/v1/me',token=user)[0]==200,'Password change preserves previously issued token policy')
+        self.accounts[user_id]=(updated,new_password)
+
+    def administration(self, admin, user, other_id, other):
+        ensure(self.http('users','/api/v1/admin/users',token=user)[0]==403,'User cannot list administrative identity data')
+        email,_=self.accounts[other_id]
+        code,page=self.http('users','/api/v1/admin/users?search='+urllib.parse.quote(email),token=admin)
+        ensure(code==200 and page['totalCount']==1 and page['items'][0]['id']==other_id,'Admin search must return current identity and version')
+        version=page['items'][0]['version']
+        route='/api/v1/admin/users/'+other_id
+        code,blocked=self.http('users',route+'/status','PATCH',{'isActive':False,'version':version},admin)
+        ensure(code==200 and not blocked['isActive'],'Administrative block must commit')
+        ensure(self.http('users','/api/v1/me',token=other)[0]==401,'Users must reject blocked account with old token')
+        poll(lambda:self.http('catalog','/api/v1/me/orders',token=other)[0],lambda code:code==401,'Catalog propagated block')
+        code,problem=self.http('users',route+'/status','PATCH',{'isActive':True,'version':version},admin)
+        ensure(code==409 and problem['code']=='concurrency_conflict','Stale administrative version must not overwrite state')
+        code,active=self.http('users',route+'/status','PATCH',{'isActive':True,'version':blocked['version']},admin)
+        ensure(code==200 and active['isActive'],'Current version must unblock')
+        self.authorization_ready(other)
+        ensure(self.http('users','/api/v1/me',token=other)[0]==200,'Same token resumes after authorized unblock')
+        ensure(self.http('users',route,'DELETE',token=admin)[0]==204,'Logical deletion must succeed')
+        ensure(self.http('users',route,'DELETE',token=admin)[0]==204,'Repeated logical deletion remains idempotent')
+        poll(lambda:self.http('catalog','/api/v1/me/orders',token=other)[0],lambda code:code==401,'Catalog propagated deletion')
+        ensure(self.http('users','/api/v1/me',token=other)[0]==401,'Deleted account cannot use old token')
+        code,page=self.http('users','/api/v1/admin/users?search='+urllib.parse.quote(email),token=admin)
+        ensure(code==200 and page['totalCount']==1 and page['items'][0]['isDeleted'],'Deleted identity remains observable to administrator')
 
     def execute(self):
         for owner in OWNERS:
@@ -108,14 +153,22 @@ class Journey:
         admin=self.login(env['AdminBootstrap__Email'],env['AdminBootstrap__Password'])
         user_id,user=self.register('owner'); other_id,other=self.register('other')
         self.notification('Welcome',user_id); self.notification('Welcome',other_id)
+        for token in (admin,user,other): self.authorization_ready(token)
+        self.profile_password(user_id,user)
         games={}
-        for suffix,price in [('approved',49.90),('rejected',600.00)]:
+        for suffix,price in [('approved',59.90),('rejected',600.00)]:
             code,game=self.http('catalog','/api/v1/games','POST',{'title':'E2E '+self.run_id+' '+suffix,'description':'Isolated real journey','basePrice':price},admin)
             ensure(code==201,'Users-issued administrator token must create real Catalog game')
             games[suffix]=game['id']
         ensure(self.http('catalog','/api/v1/games','POST',{'title':'Denied','basePrice':1},user)[0]==403,'User token must not create games')
+        promo_route='/api/v1/games/'+games['approved']+'/promotions'
+        for discount in (10,25):
+            code,_=self.http('catalog',promo_route,'POST',{'discountPercentage':discount,'startsAt':'2020-01-01T00:00:00Z','endsAt':'2090-01-01T00:00:00Z'},admin)
+            ensure(code==201,'Administrator must create overlapping real promotions')
+        code,discounted=self.http('catalog','/api/v1/games/'+games['approved'])
+        ensure(code==200 and discounted['currentPrice']==Decimal('44.93') and discounted['discountPercentage']==25,'Highest active promotion must calculate44.93')
         orders={}
-        for label,expected,price in [('approved','Approved',Decimal('49.90')),('rejected','Rejected',Decimal('600.00'))]:
+        for label,expected,price in [('approved','Approved',Decimal('44.93')),('rejected','Rejected',Decimal('600.00'))]:
             code,accepted=self.http('catalog','/api/v1/me/library','POST',{'gameId':games[label]},user)
             ensure(code==202 and accepted['price']==price and accepted['status']=='Pending','Purchase must atomically accept server snapshot')
             order_id=str(uuid.UUID(accepted['orderId'])); orders[label]=order_id
@@ -137,7 +190,7 @@ class Journey:
         code,library=self.http('catalog','/api/v1/me/library',token=user)
         ensure(code==200 and library['totalCount']==1 and len(library['items'])==1,'Only Approved adds to library')
         entry=library['items'][0]
-        ensure(set(entry)=={'gameId','title','acquiredAt','acquisitionPrice'} and entry['gameId']==games['approved'] and entry['acquisitionPrice']==Decimal('49.90'),'Acquisition must preserve legacy response and order price')
+        ensure(set(entry)=={'gameId','title','acquiredAt','acquisitionPrice'} and entry['gameId']==games['approved'] and entry['acquisitionPrice']==Decimal('44.93'),'Acquisition must preserve legacy response and order price')
         code,own_orders=self.http('catalog','/api/v1/me/orders',token=user)
         ensure(code==200 and own_orders['totalCount']==2,'Owner must see both actual orders')
         ensure(self.db('notifications',f'''SELECT count(*) FROM "NotificationIntents" WHERE "Kind"='PurchaseConfirmation' AND "BusinessId"='{orders['rejected']}' ''')=='0','Rejected must not create confirmation')
@@ -145,21 +198,31 @@ class Journey:
         for path in ('/api/v1/me/library','/api/v1/me/orders'):
             code,empty=self.http('catalog',path,token=other)
             ensure(code==200 and empty['totalCount']==0 and empty['items']==[],'Other owner lists must remain empty')
+        route='/api/v1/games/'+games['approved']
+        code,updated=self.http('catalog',route,'PUT',{'title':'E2E updated '+self.run_id,'description':'Edited after acquisition','basePrice':99},admin)
+        ensure(code==200 and updated['basePrice']==99,'Administrator must update active game')
+        ensure(self.http('catalog',route,'DELETE',token=admin)[0]==204,'Logical game deletion must succeed')
+        ensure(self.http('catalog',route,'DELETE',token=admin)[0]==204,'Repeated game deletion must remain204')
+        ensure(self.http('catalog',route)[0]==404,'Inactive game leaves public catalog')
+        ensure(self.http('catalog',route,'PUT',{'title':'Restore','basePrice':1},admin)[0]==404,'PUT cannot reactivate game')
+        code,history=self.http('catalog','/api/v1/me/library',token=user)
+        ensure(code==200 and history['items'][0]['acquisitionPrice']==Decimal('44.93') and history['items'][0]['title']=='E2E updated '+self.run_id,'Edited inactive game remains in history at original price')
+        self.administration(admin,user,other_id,other)
         # Both consumers committed before this negative assertion; no timing-only absence test.
         for owner in OWNERS:
             logs=self.logs(owner)
-            ensure(all(value.lower() not in logs.lower() for value in self.secrets),'Production logs must omit full contact and credentials')
+            ensure(all(value.lower() not in logs.lower() and urllib.parse.quote(value,safe='').lower() not in logs.lower() for value in self.secrets),'Production logs must omit literal and URL-encoded full contact and credentials: '+owner)
         images={}
         for owner in (*OWNERS,'rabbitmq-bootstrap','postgres','rabbitmq'):
             obj=json.loads(subprocess.run(['docker','--context',self.args.docker_context,'inspect',self.ids[owner]],capture_output=True,text=True,check=True).stdout)[0]
             ensure(obj['Config']['Labels']['com.docker.compose.project']==self.project,'Resource project identity changed')
             images[owner]={'container':obj['Id'],'image':obj['Image'],'reference':obj['Config']['Image']}
-        result={'status':'passed','mode':'basic-four-real-services','run_id':self.run_id,'project':self.project,
+        result={'status':'passed','mode':'complete-four-real-services','run_id':self.run_id,'project':self.project,
                 'at':datetime.datetime.now(datetime.timezone.utc).isoformat(),'user_id':user_id,'other_user_id':other_id,
                 'games':games,'orders':orders,'images':images,
                 'checks':['all-ready','topology-gate','users-token-catalog-admin','welcome-console-and-sent',
-                          'approved-library-confirmation','rejected-without-acquisition-or-confirmation','owner-isolation','private-logs'],
-                'limits':'Distributed authorization and remaining inherited capabilities are validated by later increments.'}
+                          'approved-library-confirmation','rejected-without-acquisition-or-confirmation','owner-isolation','private-logs','profile-password-contact-convergence','administrative-version-and-block-unblock-delete','distributed-authorization','promotions44.93-and-crud-history'],
+                'limits':'Operational recovery and advanced interleavings are covered separately by INT02/INT05/INT06; Kubernetes by INT03.'}
         if self.args.output:
             self.args.output.parent.mkdir(parents=True,exist_ok=True)
             with self.args.output.open('x') as stream: stream.write(json.dumps(result,indent=2)+'\n')
