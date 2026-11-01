@@ -7,28 +7,61 @@ migrations e têm readiness próprio; `up -d` sozinho não comprova a jornada.
 
 ## Preparar fontes e configuração
 
-Requer Docker com Compose, Python3, Git e OpenSSL. A validação local usa o contexto
-Docker `orbstack`. Tenha quatro checkouts limpos com os incrementos que deseja
-combinar. Os caminhos abaixo são exemplos de clones irmãos; worktrees explícitas
-também são aceitas. O script registra os SHAs completos e recusa fontes sujas.
-Ele não faz checkout, merge, download nem publicação.
+Requer Docker com Compose, Python3, Git e OpenSSL. O alvo validado é
+**darwin-arm64/OrbStack**, com containers linux/arm64. Não se afirma suporte a
+Linux, Windows, x86_64 ou outra engine sem adaptação e nova validação.
 
-Na raiz da orquestração:
+Com quatro clones irmãos limpos (`../fcg-users-api`, `../fcg-catalog-api`,
+`../fcg-payments-api`, `../fcg-notifications-api`), na raiz da orquestração:
 
 ```sh
-python3 scripts/prepare-local.py \
-  --users ../fcg-users-api \
-  --catalog ../fcg-catalog-api \
-  --payments ../fcg-payments-api \
-  --notifications ../fcg-notifications-api \
-  --output .local/demo
+python3 scripts/prepare-local.py --compose-default
+export DOCKER_CONTEXT=orbstack
+docker compose up --build
+```
 
-docker --context orbstack compose --env-file .local/demo/demo.env up -d --build
+O `export` vale somente no terminal e não muda o contexto Docker global. A forma
+exata equivalente, sem export, é `docker --context orbstack compose up --build`.
+Para background, acrescente `-d`. Em outro terminal, use explicitamente o contexto:
+
+```sh
+docker --context orbstack compose ps -a
 scripts/e2e.sh --target compose --env-file .local/demo/demo.env \
   --output .local/demo/e2e-first.json
-scripts/e2e.sh --target compose --env-file .local/demo/demo.env \
-  --output .local/demo/e2e-second.json
 ```
+
+O comando do enunciado `docker-compose up` corresponde à grafia legada. A versão
+exercitada usa `docker compose up`; o executável legado não foi validado. O comando
+puro exige o preparo inicial de chaves/configuração e os quatro checkouts: a
+orquestração não contém o código dos serviços nem baixa repositórios, faz checkout,
+merge ou publicação. O preparo é único por ambiente, não uma etapa de cada partida.
+Ele registra SHAs completos e recusa fontes sujas. Clones `main` servem após o merge
+aprovado se contiverem a combinação; antes disso use os commits revisados.
+
+Em worktrees ou fontes fora dos nomes padrão, substitua apenas os caminhos:
+
+```sh
+python3 scripts/prepare-local.py --compose-default \
+  --users /caminho/users --catalog /caminho/catalog \
+  --payments /caminho/payments --notifications /caminho/notifications
+
+docker --context orbstack compose up -d --build
+```
+
+`--compose-default` cria um link `.env` na raiz para `.local/demo/demo.env`, ambos
+ignorados pelo Git. Recusa arquivo ou link `.env` já existente, inclusive quebrado,
+antes de gerar o ambiente. Não copie `.env.example` por cima: os valores DEMO
+públicos documentam a configuração, enquanto o preparo gera senhas/chaves próprias.
+Em falha parcial ou corrida de criação do link, inspecione o diretório novo; não há
+remoção ou sobrescrita automática. Variáveis `FCG_*`/`COMPOSE_*` exportadas podem
+sobrepor `.env`; use um terminal sem overrides para reproduzir a combinação.
+
+Para vários ambientes simultâneos, omita `--compose-default`, forneça
+`--output .local/outro` e use `docker --context orbstack compose --env-file
+.local/outro/demo.env up -d --build`. A interface explícita anterior continua válida.
+Não remova `.env` nem repita o preparo para reiniciar: `docker --context orbstack
+compose up -d` reutiliza configuração, chaves e volumes. Parada:
+`docker --context orbstack compose down` preserva volumes.
 
 Os checkouts precisam conter as capacidades descritas nos READMEs dos serviços.
 A preparação não certifica um SHA como release. As revisões selecionadas ficam em

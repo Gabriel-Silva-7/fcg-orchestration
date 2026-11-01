@@ -6,9 +6,17 @@ O Compose já provisiona PostgreSQL 16 com quatro bancos e credenciais isoladas,
 
 ## Executar
 
-1. Obtenha os quatro serviços em checkouts limpos nas revisões da combinação que será revisada. Não selecione `main` automaticamente; confira o [guia de release](docs/release.md).
-2. Siga o [guia Compose](docs/compose.md): `prepare-local.py` gera configuração privada, depois `docker --context orbstack compose --env-file .local/demo/demo.env up -d --build` sobe a aplicação completa. `scripts/e2e.sh --target compose` verifica os fluxos reais.
-3. Para Kubernetes, siga o [guia Kind](k8s/README.md): prepare as ferramentas, renderize com `--applications` e execute `deploy.py up`. Confira `kubectl get pods` pelo kubeconfig privado e rode o E2E com `--target k8s`.
+1. Obtenha os quatro serviços em checkouts limpos nas revisões selecionadas. Antes da integração, use os SHAs revisados; **após o merge aprovado**, `main` pode ser usado se contiver a combinação desejada. Registre os SHAs efetivos conforme o [guia de release](docs/release.md).
+2. Com clones irmãos `../fcg-users-api`, `../fcg-catalog-api`, `../fcg-payments-api` e `../fcg-notifications-api`, execute uma única preparação na raiz da orquestração:
+
+   ```sh
+   python3 scripts/prepare-local.py --compose-default
+   export DOCKER_CONTEXT=orbstack
+   docker compose up --build
+   ```
+
+   O `.env` ignorado aponta à configuração privada gerada. Em outro terminal, no mesmo repositório, `docker --context orbstack compose ps -a` mostra a stack. Para background use `docker --context orbstack compose up -d --build`. O [guia Compose](docs/compose.md) mostra caminhos explícitos, E2E e reinício. Sem os quatro checkouts o build literal é inviável: cada serviço é um repositório separado e a orquestração não baixa código automaticamente. `docker-compose up` é a grafia legada; a ferramenta validada é `docker compose`.
+3. Para Kubernetes, siga o [guia Kind](k8s/README.md): renderize com `--applications`, execute `deploy.py up` com gates e, no diretório renderizado `04-applications`, reaplique com `kubectl apply -f .` e confira `kubectl get pods` usando kubeconfig e namespace dedicados. Execute o E2E com `--target k8s`.
 4. Para revisão interativa, `access.py` mantém os acessos locais e recupera os forwards após troca de Pod. Os guias explicam parada e descarte dos recursos próprios.
 
 As URLs abaixo identificam as origens Git. Permissão de acesso e disponibilidade dos commits selecionados precisam ser verificadas para o avaliador; uma origem listada não comprova publicação.
@@ -51,3 +59,11 @@ Procedimentos de reset e limpeza precisam identificar os recursos criados pela p
 [Prova de concorrência e snapshot](docs/concurrency.md) com quatro hosts reais e barreiras PostgreSQL.
 
 [Prova de identidade e contato fora de ordem](docs/identity-ordering.md) com snapshots e eventos originais.
+
+## Limite de portabilidade
+
+A validação disponível foi executada em **darwin-arm64 com Docker no contexto
+OrbStack**; os containers executam linux/arm64. O preparo de Kind/kubectl também
+é específico desse alvo. Não foi validada a reprodução em Linux, Windows, x86_64
+ou outra engine/contexto Docker. Esses alvos exigem adaptar e testar ferramentas,
+acesso ao Docker, permissões/mounts e imagens antes de afirmar suporte.

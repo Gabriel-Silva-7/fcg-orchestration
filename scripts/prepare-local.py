@@ -12,6 +12,7 @@ import uuid
 from urllib.parse import urlsplit, urlunsplit
 
 OWNERS = ('users', 'catalog', 'payments', 'notifications')
+ROOT = Path(__file__).resolve().parents[1]
 
 def git(path, *args):
     run = subprocess.run(['git', '-C', str(path), *args], capture_output=True, text=True, timeout=15)
@@ -20,10 +21,13 @@ def git(path, *args):
 
 def prepare(args):
     output = args.output.resolve()
+    default_env = ROOT/'.env'
+    if args.compose_default and os.path.lexists(default_env):
+        raise ValueError('.env already exists; reuse the existing environment or choose --output without --compose-default')
     sources = {}
     for owner in OWNERS:
         path = getattr(args, owner).resolve()
-        if not (path/'Dockerfile').is_file(): raise ValueError(owner+' source has no Dockerfile')
+        if not (path/'Dockerfile').is_file(): raise ValueError(owner+' source has no Dockerfile at '+str(path)+'; provide --'+owner+' /path/to/clean/checkout')
         if git(path, 'status', '--porcelain'): raise ValueError(owner+' source must be clean; commit the reviewed increment first')
         origin = git(path, 'config', '--get', 'remote.origin.url')
         parsed = urlsplit(origin)
@@ -63,13 +67,20 @@ def prepare(args):
         stream.write('\n'.join(key+'='+quoted(value) for key,value in values.items())+'\n')
     (output/'sources.json').write_text(json.dumps({'mode':'local-preparation-not-public-release', 'project':project,
         'at':datetime.datetime.now(datetime.timezone.utc).isoformat(), 'services':sources}, indent=2)+'\n')
+    if args.compose_default:
+        # Atomic creation refuses even a dangling symlink created after the preflight.
+        default_env.symlink_to(envfile)
     print('Prepared private local environment: '+str(output))
-    print('Use --env-file '+str(envfile)+' with docker compose; no credentials were printed.')
+    if args.compose_default:
+        print('Default .env linked; from '+str(ROOT)+' run docker --context orbstack compose up --build.')
+    else:
+        print('Use --env-file '+str(envfile)+' with docker compose; no credentials were printed.')
 
 if __name__ == '__main__':
     parser=argparse.ArgumentParser(description=__doc__)
-    for owner in OWNERS: parser.add_argument('--'+owner, type=Path, required=True)
-    parser.add_argument('--output', type=Path, required=True)
+    for owner in OWNERS: parser.add_argument('--'+owner, type=Path, default=ROOT.parent/('fcg-'+owner+'-api'))
+    parser.add_argument('--output', type=Path, default=ROOT/'.local/demo')
+    parser.add_argument('--compose-default', action='store_true', help='Create the ignored root .env link for docker compose up; never overwrite it')
     try: prepare(parser.parse_args())
     except (ValueError, OSError, subprocess.TimeoutExpired) as error:
         print('Preparation failed: '+str(error), file=sys.stderr); sys.exit(1)
