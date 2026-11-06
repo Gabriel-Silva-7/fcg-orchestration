@@ -35,8 +35,8 @@ exercitada usa `docker compose up`; o executável legado não foi validado. O co
 puro exige o preparo inicial de chaves/configuração e os quatro checkouts: a
 orquestração não contém o código dos serviços nem baixa repositórios, faz checkout,
 merge ou publicação. O preparo é único por ambiente, não uma etapa de cada partida.
-Ele registra SHAs completos e recusa fontes sujas. Clones `main` servem após o merge
-aprovado se contiverem a combinação; antes disso use os commits revisados.
+Ele registra SHAs completos e recusa fontes sujas. Selecione os cinco SHAs da combinação e confira os HEADs efetivos;
+o nome da branch não identifica uma revisão imutável.
 
 Em worktrees ou fontes fora dos nomes padrão, substitua apenas os caminhos:
 
