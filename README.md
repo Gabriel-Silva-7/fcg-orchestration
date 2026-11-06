@@ -6,7 +6,7 @@ O Compose já provisiona PostgreSQL 16 com quatro bancos e credenciais isoladas,
 
 ## Executar
 
-1. Obtenha os quatro serviços em checkouts limpos nas revisões selecionadas. Antes da integração, use os SHAs revisados; **após o merge aprovado**, `main` pode ser usado se contiver a combinação desejada. Registre os SHAs efetivos conforme o [guia de release](docs/release.md).
+1. Obtenha os quatro serviços em checkouts limpos nas revisões selecionadas. Identifique a combinação por cinco SHAs completos; nomes de branch podem mudar. Registre os SHAs efetivos conforme o [guia de release](docs/release.md).
 2. Com clones irmãos `../fcg-users-api`, `../fcg-catalog-api`, `../fcg-payments-api` e `../fcg-notifications-api`, execute uma única preparação na raiz da orquestração:
 
    ```sh
@@ -19,7 +19,7 @@ O Compose já provisiona PostgreSQL 16 com quatro bancos e credenciais isoladas,
 3. Para Kubernetes, siga o [guia Kind](k8s/README.md): renderize com `--applications`, execute `deploy.py up` com gates e, no diretório renderizado `04-applications`, reaplique com `kubectl apply -f .` e confira `kubectl get pods` usando kubeconfig e namespace dedicados. Execute o E2E com `--target k8s`.
 4. Para revisão interativa, `access.py` mantém os acessos locais e recupera os forwards após troca de Pod. Os guias explicam parada e descarte dos recursos próprios.
 
-As URLs abaixo identificam as origens Git. Permissão de acesso e disponibilidade dos commits selecionados precisam ser verificadas para o avaliador; uma origem listada não comprova publicação.
+As URLs abaixo identificam as origens Git. A listagem identifica os repositórios; acesso externo e disponibilidade remota de cada SHA exigem verificação separada.
 
 ## Repositórios e responsabilidades
 
@@ -48,7 +48,7 @@ Desenvolvimento usa checkouts locais limpos em contextos explícitos, selecionad
 
 Os [procedimentos de recuperação](docs/recovery.md) separam replay local de negócio, retomada do dispatcher e redrive de transporte.
 
-Consulte a [arquitetura e os eventos](docs/architecture.md), a [matriz de demonstração](docs/requirements.md), [scripts](scripts/README.md) e [Kubernetes](k8s/README.md) para a divisão de responsabilidades. Os READMEs de cada serviço descrevem os comandos que já funcionam naquele repositório. Cada execução do E2E registra IDs únicos e imagens efetivas; o manifesto local não equivale a release pública ou integração em `main`.
+Consulte a [arquitetura e os eventos](docs/architecture.md), a [matriz de demonstração](docs/requirements.md), [scripts](scripts/README.md) e [Kubernetes](k8s/README.md) para a divisão de responsabilidades. Os READMEs de cada serviço descrevem seus comandos e configurações. Cada execução do E2E registra IDs únicos e imagens efetivas; o manifesto local não equivale a release pública ou integração em `main`.
 
 ## Configuração e dados
 
@@ -67,3 +67,6 @@ OrbStack**; os containers executam linux/arm64. O preparo de Kind/kubectl també
 é específico desse alvo. Não foi validada a reprodução em Linux, Windows, x86_64
 ou outra engine/contexto Docker. Esses alvos exigem adaptar e testar ferramentas,
 acesso ao Docker, permissões/mounts e imagens antes de afirmar suporte.
+
+Pré-requisito para a stack Kind deste perfil: engine Docker com pelo menos **7 GiB**
+de memória disponível/configurada. O helper recusa engines abaixo desse orçamento.

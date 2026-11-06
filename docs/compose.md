@@ -176,3 +176,6 @@ python3 -m unittest discover -s tests/compose -v
 Os testes conferem os gates, fronteira de chaves/bancos e preparação com Git/RSA
 reais, recusa de fontes sujas/sobrescrita, permissões e build real com caminho que
 contém espaços, dólar e apóstrofo. Não substituem a jornada dos quatro hosts.
+
+Pré-requisito para a stack Kind deste perfil: engine Docker com pelo menos **7 GiB**
+de memória disponível/configurada. O helper recusa engines abaixo desse orçamento.

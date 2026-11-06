@@ -262,3 +262,6 @@ scripts/e2e.sh --target k8s --rendered .local/kind-video \
 
 Na gravação, identifique cortes/aceleração de build/rollout para manter a meta
 17:30 e limite 20min; a reaplicação e a listagem devem ser comandos visíveis reais.
+
+Pré-requisito para a stack Kind deste perfil: engine Docker com pelo menos **7 GiB**
+de memória disponível/configurada. O helper recusa engines abaixo desse orçamento.

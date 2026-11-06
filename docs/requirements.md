@@ -27,7 +27,7 @@ aprovação humana ou submissão. Use os SHAs e imagens registrados na execuçã
 | README principal com execução Docker/Kubernetes | 6 | [README principal](../README.md), [Compose](compose.md), [Kind](../k8s/README.md) |
 | Links dos quatro repositórios e orquestração | 5 | URLs de origem no README; acesso do avaliador e revisões finais precisam ser conferidos na release |
 | Vídeo de até20min com repositórios, Compose, fluxos e deploy | 5 | Material de gravação e mídia final têm aceite separado; documentação textual não comprova vídeo |
-| Relatório PDF/TXT e postagem na data de entrega | 6 | Etapa final de entrega; dados pessoais e links finais permanecem em aberto |
+| Relatório PDF/TXT e postagem na data de entrega | 6 | O relatório deve conter os dados confirmados dos participantes e os links finais; sua conferência é separada das provas técnicas |
 
 ## Leitura das evidências
 

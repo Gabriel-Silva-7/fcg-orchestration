@@ -1,6 +1,6 @@
 # Identificação e reprodução de uma release
 
-Há scripts executáveis de preparação, Compose, Kubernetes e jornada integrada. Eles registram fontes e imagens da execução local. Ainda é necessário empacotar e conferir a reprodução a partir de cinco clones limpos antes de chamar essa combinação de release; publicação e integração em `main` permanecem etapas separadas.
+Há scripts executáveis de preparação, Compose, Kubernetes e jornada integrada. Eles registram fontes e imagens da execução local. Uma evidência de release deve incluir a reprodução a partir de cinco clones limpos e identificar a origem desses clones (bundles locais ou GitHub). Testes em worktrees locais não comprovam reprodução pelo GitHub; publicação e integração em `main` exigem registros próprios.
 
 ## Revisões de origem
 
@@ -29,8 +29,8 @@ Publicar repositórios, imagens ou tags e submeter a entrega são ações separa
 
 ## Pacote local de fontes para revisão
 
-Enquanto os commits aguardam revisão e publicação, `scripts/release.py` permite
-reproduzir a combinação sem depender de refs remotas ainda indisponíveis. É um
+`scripts/release.py` permite reproduzir uma combinação de commits locais
+sem depender da disponibilidade das refs remotas. É um
 pacote de fontes local, não uma release publicada. Requer Python3 e Git; cada
 origem precisa estar limpa e ter URL HTTPS sem credenciais. O script da orquestração
 também precisa estar commitado, pois seu próprio HEAD integra o pacote.
