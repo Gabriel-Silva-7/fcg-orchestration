@@ -229,7 +229,7 @@ class Journey:
                 'games':games,'orders':orders,'images':images,
                 'checks':['all-ready','topology-gate','users-token-catalog-admin','welcome-console-and-sent',
                           'approved-library-confirmation','rejected-without-acquisition-or-confirmation','owner-isolation','private-logs','profile-password-contact-convergence','administrative-version-and-block-unblock-delete','distributed-authorization','promotions44.93-and-crud-history'],
-                'limits':getattr(self,'validation_limits','Operational recovery and advanced interleavings are covered separately by INT02/INT05/INT06; Kubernetes by INT03.')}
+                'limits':getattr(self,'validation_limits','Operational recovery, concurrency and identity ordering are covered by separate procedures (docs/recovery.md, docs/concurrency.md, docs/identity-ordering.md); Kubernetes by the Kind journey (k8s/README.md).')}
         if self.args.output:
             self.args.output.parent.mkdir(parents=True,exist_ok=True)
             with self.args.output.open('x') as stream: stream.write(json.dumps(result,indent=2)+'\n')
