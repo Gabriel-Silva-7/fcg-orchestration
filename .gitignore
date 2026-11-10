@@ -3,6 +3,7 @@
 **/TestResults/
 .vs/
 .idea/
+.vscode/
 .DS_Store
 .env
 .env.*
@@ -10,8 +11,6 @@
 *.user
 *.suo
 .worktrees/
-.superpowers/
-docs/fase-2/
 
 **/__pycache__/
 
