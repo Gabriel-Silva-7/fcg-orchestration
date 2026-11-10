@@ -71,8 +71,8 @@ por clone externo ou Kubernetes. Essas etapas têm verificação separada.
 
 O diretório privado contém `demo.env` com credenciais aleatórias locais, par RSA
 persistido e manifesto sem segredos. É ignorado pelo Git. Não envie esse diretório
-nem imprima `docker compose config` com o ambiente real. A pasta tem modo0700 e o
-arquivo de ambiente0600. Os PEMs têm leitura para o UID1654 através de mounts
+nem imprima `docker compose config` com o ambiente real. A pasta tem modo 0700 e o
+arquivo de ambiente 0600. Os PEMs têm leitura para o UID 1654 através de mounts
 somente leitura; a pasta privada protege seu acesso pelo host. A chave privada só
 é montada em Users; Catalog recebe a pública; workers não recebem chaves JWT.
 A geração falha se o destino já existir: reinicie com o ambiente existente para
@@ -112,16 +112,16 @@ Não publique a privada nem altere chaves a cada partida.
 O script obtém token administrativo pelo login real de Users e cria jogos via HTTP
 Catalog. Para cada execução, cadastra dois titulares com dados únicos, observa
 Welcome como `Sent` no banco Notifications e emissão `[E-MAIL SIMULADO]` no console.
-O usuário compra um jogo59,90 com promoções sobrepostas de10% e25%, cujo preço
-calculado é44,93 (Approved), e outro600,00 (Rejected) sob limite500.
-As requisições usam o preço do servidor e aceitam202 antes do resultado assíncrono.
+O usuário compra um jogo 59,90 com promoções sobrepostas de 10% e25%, cujo preço
+calculado é44,93 (Approved), e outro 600,00 (Rejected) sob limite 500.
+As requisições usam o preço do servidor e aceitam 202 antes do resultado assíncrono.
 Polling limitado observa o estado terminal mesmo se Pending já tiver passado.
 
 Confere a decisão real de Payments e o mesmo instante no Catalog, a cópia independente
 em Notifications, biblioteca com um único jogo/preço44,93 e confirmação emitida para
 o aprovado. Após observar Rejected nos dois consumidores, exige ausência de aquisição
 e de intenção/log de confirmação para esse pedido. Outro titular não vê pedidos nem
-biblioteca; detalhe alheio404; tokenUser não cria jogo403. Os logs são conferidos sem
+biblioteca; detalhe alheio 404; tokenUser não cria jogo 403. Os logs são conferidos sem
 contato completo literal ou codificado na URL, senha ou token. IDs de execução/UserId/OrderId correlacionam a prova.
 
 As consultas SQL de verificação usam a role de cada banco, somente leitura. Nenhum
@@ -134,21 +134,21 @@ Execute duas vezes para comprovar isolamento entre execuções. O E2E cria dados
 preserva volumes inclusive em falha, para diagnóstico. A jornada também verifica
 GET/PATCH do próprio perfil, propagação do contato para Notifications, alteração
 de senha com senha antiga recusada e token previamente emitido preservado. A lista
-administrativa fornece versão para bloquear/desbloquear; versão antiga retorna409.
+administrativa fornece versão para bloquear/desbloquear; versão antiga retorna 409.
 O mesmo JWT perde/recupera acesso conforme o estado recebido no Catalog. Exclusão
-lógica repetida permanece204 e o registro continua visível na lista administrativa.
-Após aquisição, edição e desativação do jogo mantêm histórico44,93 com título atual;
-DELETE repetido204 e PUT inativo404. Antes de usar uma identidade recém-criada,
+lógica repetida permanece 204 e o registro continua visível na lista administrativa.
+Após aquisição, edição e desativação do jogo mantêm histórico 44,93 com título atual;
+DELETE repetido 204 e PUT inativo 404. Antes de usar uma identidade recém-criada,
 o script aguarda a projeção ativa com prazo, pois readiness não prova sua entrega.
-Logins que recebem429 respeitam o limite padrão e aguardam a janela dentro de
-um prazo de90s; o cenário não aumenta o limite de produção. Recuperação operacional
+Logins que recebem 429 respeitam o limite padrão e aguardam a janela dentro de
+um prazo de 90s; o cenário não aumenta o limite de produção. Recuperação operacional
 e interleavings avançados são validados em provas separadas. O atraso/limite
 financeiro esperado aqui é o padrão2s/500; alterá-lo exige ajustar o cenário.
 
 ## Saúde, diagnóstico e parada
 
 As quatro aplicações expõem `/health/live` e `/health/ready` e healthcheck Docker
-na porta8080. A privada não é embutida em imagem. Banco e broker têm volumes
+na porta 8080. A privada não é embutida em imagem. Banco e broker têm volumes
 persistentes e usuários próprios. Parada/reinício preserva os dados:
 
 ```sh

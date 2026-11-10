@@ -15,7 +15,7 @@ Os nomes não exigem um caminho pessoal específico. O Compose atual provisiona 
 
 ## Worktrees e revisão
 
-Cada tarefa usa branch e worktree próprias no repositório dono do código. Um executor escreve por worktree; outra ferramenta pode continuar após registrar a transferência. Uma worktree é um checkout adicional do mesmo histórico Git, não uma cópia manual para colar de volta.
+Cada tarefa usa branch e worktree próprias no repositório dono do código. Uma worktree é um checkout adicional do mesmo histórico Git, não uma cópia manual para colar de volta.
 
 De um repositório já clonado, estes comandos apenas inspecionam seu estado:
 
@@ -34,4 +34,4 @@ Os comandos de restore, testes, build e container pertencem ao README de cada se
 
 Executar cenários com nomes, portas e dados próprios. Registrar IDs de containers, rede e volumes antes da limpeza e remover somente os recursos da execução. Conservar os dados quando a prova exigir reinício; recriar um banco vazio não comprova recuperação.
 
-Os guias de [PostgreSQL](postgres.md) e [RabbitMQ](rabbitmq.md) documentam o provisionamento já executável. A primeira jornada integrada está disponível no Compose com os adaptadores dos quatro hosts; capacidades herdadas restantes e autorização distribuída entram na validação completa posterior.
+Os guias de [PostgreSQL](postgres.md) e [RabbitMQ](rabbitmq.md) documentam o provisionamento já executável. A jornada integrada completa dos quatro serviços está disponível no [Compose](compose.md) e no [Kind](../k8s/README.md).

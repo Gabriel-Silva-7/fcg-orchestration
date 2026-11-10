@@ -21,7 +21,7 @@ permanece até a limpeza do volume descartável: a fixture admite duplicação, 
 alegar entrega exatamente uma vez. Duplicatas com novo MessageId exercitam também
 a deduplicação permanente por identidade/versão/fato de cadastro.
 
-O cadastro autentica em Users enquanto Catalog recebe503 e Retry-After1 por
+O cadastro autentica em Users enquanto Catalog recebe 503 e Retry-After1 por
 projeção desconhecida. Depois de liberar o cadastro, uma compra real é aceita com
 Payments suspenso. O usuário muda contato e é bloqueado. Users nega imediatamente;
 a projeção antiga de Catalog continua válida durante o atraso controlado. Ao
@@ -39,7 +39,7 @@ Com bindings normais restaurados, o relatório mede bloqueio, desbloqueio e excl
 de usuário e administrador usando tokens reais. O intervalo monotônico começa
 antes da requisição Users e termina na observação HTTP da projeção Catalog;
 <=5s é objetivo verificado apenas nesse ambiente saudável. O atraso deliberado
-maior que5s é registrado separadamente e demonstra que essa meta não é promessa
+maior que 5s é registrado separadamente e demonstra que essa meta não é promessa
 sob falha. Conta excluída permanece terminal diante de comandos de desbloqueio,
 eventos antigos e uma fixture explícita de restauração inválida em versão maior.
 

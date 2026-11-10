@@ -100,10 +100,10 @@ docker --context orbstack build -f tools/FCG.Messaging.Operations/Dockerfile -t 
 ```
 
 Executar essa imagem na rede do projeto requer os mesmos valores AMQP pelo
-ambiente, com host `rabbitmq` e porta5672. Nenhuma porta HTTP é exposta pela ferramenta.
+ambiente, com host `rabbitmq` e porta 5672. Nenhuma porta HTTP é exposta pela ferramenta.
 Não é um serviço iniciado no Compose por padrão.
 
-A seleção é pelo MessageId GUID original, com até100 mensagens examinadas
+A seleção é pelo MessageId GUID original, com até 100 mensagens examinadas
 (`--scan-limit 1..100`). Sem `--apply`, faz somente prévia e recoloca mensagens na
 fila. Apply exige mensagem persistente, publica com confirmação e mandatory
 somente na fila original pelo exchange padrão, preservando corpo, propriedades e

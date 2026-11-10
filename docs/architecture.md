@@ -49,9 +49,9 @@ sequenceDiagram
   A->>A: JWT e estado local atual
 ```
 
-JWT dura15min, com tolerância zero; apenas Users possui a chave privada.
+JWT dura 15min, com tolerância zero; apenas Users possui a chave privada.
 Bloqueio/exclusão/rebaixamento chegam por eventos. Até a entrega, o consumidor pode
-observar o estado anterior; estado ausente retorna503 com Retry-After1. Snapshot
+observar o estado anterior; estado ausente retorna 503 com Retry-After1. Snapshot
 recupera estado sem inventar cadastro: um Created atrasado ainda pode gerar o único
 Welcome. Veja [identidade](identity-contracts.md) e [ordenação](identity-ordering.md).
 
@@ -82,9 +82,9 @@ sequenceDiagram
   A-->>C: Estado terminal e aquisições
 ```
 
-O preço é snapshot do aceite:59,90 com25% resulta44,93. Edição, desativação ou fim
-da promoção posterior não alteram o pedido. A simulação padrão espera2s e aprova
-preços até500 inclusive; acima disso retorna Rejected/AmountAboveLimit. Rejected
+O preço é snapshot do aceite:59,90 com 25% resulta 44,93. Edição, desativação ou fim
+da promoção posterior não alteram o pedido. A simulação padrão espera 2s e aprova
+preços até 500 inclusive; acima disso retorna Rejected/AmountAboveLimit. Rejected
 não adiciona biblioteca nem confirmação. A primeira decisão durável é preservada
 mesmo com reentrega, concorrência ou mudança posterior da política.
 

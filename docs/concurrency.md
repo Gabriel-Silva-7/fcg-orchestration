@@ -22,12 +22,12 @@ recebe `game_already_acquired`. Há apenas um pedido aberto e uma aquisição.
 
 A mesma barreira permite editar e desativar um jogo por HTTP depois da seleção de
 preço e antes do commit do pedido. Outro caso espera a expiração natural da promoção
-com o INSERT bloqueado. Nas duas situações, a seleção de59,90 com25% permanece44,93
+com o INSERT bloqueado. Nas duas situações, a seleção de 59,90 com 25% permanece 44,93
 no pedido, pagamento e aquisição. A promoção expirada é observada pela consulta
 pública antes da liberação do commit, sem relógio de teste ou SQL de alteração.
 
 Dois processos Payments usam filas de entrada exclusivas e o mesmo banco próprio,
-com limites500 e0. O pedido vem de uma compra HTTP real, e duas cópias de negócio
+com limites 500 e0. O pedido vem de uma compra HTTP real, e duas cópias de negócio
 idênticas têm MessageIds diferentes. Um lock transacional por OrderId mantém ambos
 esperando antes de liberar a disputa. A primeira decisão persistida determina
 resultado, política e instante; o outro processo reutiliza esse winner. As duas

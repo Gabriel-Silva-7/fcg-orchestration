@@ -7,8 +7,8 @@ com placeholders diretamente.** Os quatro serviços já mantêm seus próprios
 manifestos nos respectivos repositórios; `render.py --applications` os agrega por
 SHA/hash em `04-applications` através deste repositório de orquestração.
 
-O alvo exercitado é Darwin/arm64 com Docker do OrbStack, Kind0.33.0,
-kubectl1.37.0 e node1.37.0 fixado por digest. As ferramentas locais e seus checksums
+O alvo exercitado é Darwin/arm64 com Docker do OrbStack, Kind 0.33.0,
+kubectl 1.37.0 e node 1.37.0 fixado por digest. As ferramentas locais e seus checksums
 oficiais estão em [`versions.json`](../scripts/kubernetes/versions.json).
 [Release oficial Kind](https://github.com/kubernetes-sigs/kind/releases/tag/v0.33.0).
 O helper não substitui binários globais nem altera o kubeconfig pessoal.
@@ -16,6 +16,10 @@ O helper não substitui binários globais nem altera o kubeconfig pessoal.
 ```sh
 python3 scripts/kubernetes/prepare-tools.py --output .tools/kubernetes
 ```
+
+O preparo baixa Kind e kubectl das releases oficiais (requer acesso à internet) e
+confere os checksums. Os comandos abaixo usam essas cópias locais em
+`.tools/kubernetes`; binários já instalados no `PATH` não são alterados.
 
 Primeiro prepare outro ambiente privado com `scripts/prepare-local.py`, escolhendo
 os quatro checkouts limpos. Depois renderize em um diretório novo:
@@ -90,15 +94,15 @@ dos serviços. A fase produtora também exige Job de topologia Complete. Não h�
 segunda cópia manual de manifestos para manter sincronizada.
 
 Cada Deployment usa uma réplica, rollout com no máximo uma réplica adicional,
-startup/liveness em `/health/live`, readiness em `/health/ready`, UID1654 e Service
-ClusterIP80→8080. Credenciais e bootstrap ficam em Secrets; chaves JWT têm Secret
+startup/liveness em `/health/live`, readiness em `/health/ready`, UID 1654 e Service
+ClusterIP 80→8080. Credenciais e bootstrap ficam em Secrets; chaves JWT têm Secret
 separado, pública em Users/Catalog e privada apenas em Users. GSS local é desabilitado
 explicitamente sem alterar SslMode. Paths, filas e nomes de configuração seguem o
 mesmo contrato do Compose.
 
 A prova completa de implantação constrói/importa as quatro imagens, testa o gate
 negativo, executa cadastro/login e compras reais, confere UID/DNS/chaves e aplica
-uma revisão de configuração700 e depois500:
+uma revisão de configuração 700 e depois 500:
 
 ```sh
 python3 scripts/kubernetes/verify-applications.py \
@@ -109,9 +113,9 @@ python3 scripts/kubernetes/verify-applications.py \
 Cada alteração é renderizada como novo pacote privado e aplicada nas fases, com
 rollout de infraestrutura, novo gate de topologia e rollout das aplicações. As
 mesmas senhas e chaves devem ser preservadas; o helper recusa rotação implícita.
-A configuração efetiva de Payments é observada no Pod e por uma compra600:
-Approved sob700, Rejected após restaurar500. Tokens anteriores, pedidos, pagamentos,
-aquisição44,93 e intenções Sent permanecem válidos. Reaplicar o último pacote sem
+A configuração efetiva de Payments é observada no Pod e por uma compra 600:
+Approved sob 700, Rejected após restaurar 500. Tokens anteriores, pedidos, pagamentos,
+aquisição 44,93 e intenções Sent permanecem válidos. Reaplicar o último pacote sem
 mudanças não deve alterar geração dos Deployments ou seus Pods.
 
 O kubeconfig e o cache de descoberta são privados. O contexto dedicado recebe o
@@ -139,7 +143,7 @@ sobrescrita. O cluster continua sob responsabilidade de quem o preparou.
 Para acesso persistente por outro terminal/cliente HTTP, use o supervisor em
 foreground, com status privado. As portas padrão são8081/8082/8083/8084 e15672;
 qualquer uma pode ser alterada com `--users-port`, `--catalog-port`,
-`--payments-port`, `--notifications-port` ou `--rabbitmq-port`. Valor0 escolhe uma
+`--payments-port`, `--notifications-port` ou `--rabbitmq-port`. Valor 0 escolhe uma
 porta livre e a registra no status:
 
 ```sh
@@ -150,7 +154,7 @@ python3 scripts/kubernetes/access.py --rendered /caminho/privado/rendered \
 `ready` só é anunciado após HTTP readiness e Management autenticado responderem.
 Porta ocupada é recusada antes de iniciar filhos; seu dono não é encerrado. Após
 troca do Pod, o supervisor tenta selecionar novamente o Service, preservando a
-porta local. Orçamento padrão:90s e até5 tentativas por indisponibilidade; flags
+porta local. Orçamento padrão:90s e até 5 tentativas por indisponibilidade; flags
 `--recovery-seconds` e `--max-attempts` podem reduzir o teste. Esgotamento retorna
 falha visível, não um endereço falsamente Ready. Ctrl+C/SIGTERM encerra somente os
 filhos próprios. Os pipes são drenados para não bloquear sessões com muitas conexões.
@@ -241,7 +245,8 @@ kubectl get pods
 O primeiro deploy é feito pelo helper com namespace, infraestrutura, PVCs e Job
 Complete antes dos produtores. O `apply -f .` acima é uma **reaplicação idempotente
 real dos quatro serviços**, não uma demonstração de primeira implantação de toda
-a stack num comando. A pasta contém somente os 16 YAMLs agregados dos serviços;
+a stack num comando. A pasta contém somente os 16 arquivos YAML agregados dos serviços (18 recursos,
+pois Users e Catalog também têm o Secret das chaves JWT);
 não abra seus Secrets na tela. `kubectl get pods` lista também banco, broker, Job
 e diagnóstico, pois o kubeconfig privado já seleciona o namespace de toda a stack.
 Job concluído aparece como Completed, não como Running. Nenhuma mudança do
@@ -260,8 +265,20 @@ scripts/e2e.sh --target k8s --rendered .local/kind-video \
   --tools .tools/kubernetes --output .local/kind-video/journey.json
 ```
 
-Na gravação, identifique cortes/aceleração de build/rollout para manter a meta
-17:30 e limite 20min; a reaplicação e a listagem devem ser comandos visíveis reais.
+### Repetir a implantação
+
+`deploy.py down --delete-owned-cluster` remove o cluster, mas mantém o
+`kubeconfig` dentro do diretório renderizado. Um novo `deploy.py up` sobre o mesmo
+diretório é recusado (`Refusing to overwrite a kubeconfig`). Para repetir, renderize
+novamente em um diretório **novo** (por exemplo `.local/kind-video-2`) e use esse
+mesmo caminho em `deploy.py`, `kubectl` e `scripts/e2e.sh`. Os nomes
+`.local/demo` e `.local/kind-video` são apenas exemplos; o [guia de release](../docs/release.md)
+usa `.local/kind-demo` para um ambiente Kind separado. Qualquer nome funciona,
+desde que seja o mesmo em todos os comandos da rodada.
+
+Na reaplicação com `kubectl apply -f .`, Deployments, Services e ConfigMaps aparecem
+como `unchanged`; os Secrets podem aparecer como `configured`, porque são
+declarados com `stringData`. Isso não altera os Pods nem indica falha.
 
 Pré-requisito para a stack Kind deste perfil: engine Docker com pelo menos **7 GiB**
 de memória disponível/configurada. O helper recusa engines abaixo desse orçamento.

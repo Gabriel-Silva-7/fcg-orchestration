@@ -19,6 +19,13 @@ O Compose já provisiona PostgreSQL 16 com quatro bancos e credenciais isoladas,
 3. Para Kubernetes, siga o [guia Kind](k8s/README.md): renderize com `--applications`, execute `deploy.py up` com gates e, no diretório renderizado `04-applications`, reaplique com `kubectl apply -f .` e confira `kubectl get pods` usando kubeconfig e namespace dedicados. Execute o E2E com `--target k8s`.
 4. Para revisão interativa, `access.py` mantém os acessos locais e recupera os forwards após troca de Pod. Os guias explicam parada e descarte dos recursos próprios.
 
+### Observações para repetir a execução
+
+- O preparo é feito uma única vez. Para subir de novo depois de `docker compose down`, rode apenas `docker compose up --build` (o `.env` existente é reaproveitado); `prepare-local.py --compose-default` recusa sobrescrever um `.env` existente.
+- Os diretórios em `.local/` são exemplos: use o mesmo caminho em todos os comandos de uma rodada. Scripts de preparo, render e E2E recusam destinos existentes; para uma nova rodada, escolha um diretório novo.
+- No Kind, `deploy.py down --delete-owned-cluster` mantém o `kubeconfig` no diretório renderizado; para implantar de novo, renderize em outro diretório (detalhes no [guia Kind](k8s/README.md#repetir-a-implantação)).
+- `prepare-tools.py` baixa Kind e kubectl fixados por checksum e precisa de acesso à internet.
+
 As URLs abaixo identificam as origens Git. A listagem identifica os repositórios; acesso externo e disponibilidade remota de cada SHA exigem verificação separada.
 
 ## Repositórios e responsabilidades
