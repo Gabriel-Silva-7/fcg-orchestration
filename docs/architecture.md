@@ -82,7 +82,7 @@ sequenceDiagram
   A-->>C: Estado terminal e aquisições
 ```
 
-O preço é snapshot do aceite:59,90 com 25% resulta 44,93. Edição, desativação ou fim
+O preço é snapshot do aceite: 59,90 com 25% resulta 44,93. Edição, desativação ou fim
 da promoção posterior não alteram o pedido. A simulação padrão espera 2s e aprova
 preços até 500 inclusive; acima disso retorna Rejected/AmountAboveLimit. Rejected
 não adiciona biblioteca nem confirmação. A primeira decisão durável é preservada

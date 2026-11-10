@@ -113,9 +113,9 @@ Crash após publish e antes do ack pode duplicar: a aplicação usa suas regras
 idempotentes. `_error` não substitui o replay de um conflito já confirmado pelo
 consumidor, que deve chamar a aplicação local do dono.
 
-Códigos dos CLIs de serviço:0 concluído/estado já atendido;1 falha segura;
-2 argumentos inválidos;3 alvo ausente;4 pendência/conflito preservado. No redrive,
-0 significa alvo encontrado (prévia) ou confirmado (apply);3 significa não encontrado
+Códigos dos CLIs de serviço: 0 concluído/estado já atendido; 1 falha segura;
+2 argumentos inválidos; 3 alvo ausente; 4 pendência/conflito preservado. No redrive,
+0 significa alvo encontrado (prévia) ou confirmado (apply); 3 significa não encontrado
 na varredura limitada. Nenhum comando tenta resolver pendências apagando dados.
 
 ## Verificação

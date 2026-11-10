@@ -154,7 +154,7 @@ python3 scripts/kubernetes/access.py --rendered /caminho/privado/rendered \
 `ready` só é anunciado após HTTP readiness e Management autenticado responderem.
 Porta ocupada é recusada antes de iniciar filhos; seu dono não é encerrado. Após
 troca do Pod, o supervisor tenta selecionar novamente o Service, preservando a
-porta local. Orçamento padrão:90s e até 5 tentativas por indisponibilidade; flags
+porta local. Orçamento padrão: 90s e até 5 tentativas por indisponibilidade; flags
 `--recovery-seconds` e `--max-attempts` podem reduzir o teste. Esgotamento retorna
 falha visível, não um endereço falsamente Ready. Ctrl+C/SIGTERM encerra somente os
 filhos próprios. Os pipes são drenados para não bloquear sessões com muitas conexões.
