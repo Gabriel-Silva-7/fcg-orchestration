@@ -36,7 +36,7 @@ Os exemplos são payloads, sem envelope de broker. Ordem das propriedades não t
 - Todos os campos descritos são obrigatórios, exceto Reason em Approved. Raiz null, propriedades desconhecidas/duplicadas, valores inválidos e campos ausentes são falha de contrato. Argumentos inválidos em construção direta também falham. Nenhuma falha de contrato vira rejeição financeira.
 - Records imutáveis comparam todos os campos, inclusive timestamps. Mesma identidade com outra data, preço, usuário, jogo ou decisão é divergência. Evolução aditiva de campos exige compatibilidade/versionamento explícitos porque os leitores v1 são estritos.
 
-Preservar o instante e o payload originais nas republicações é responsabilidade da persistência de cada serviço. A precisão adotada é representável em PostgreSQL; estes testes não exercitam PostgreSQL nem prometem entrega/exatamente uma emissão.
+Preservar o instante e o payload originais nas republicações é responsabilidade da persistência de cada serviço. A precisão adotada é representável em PostgreSQL; os testes de contrato não exercitam PostgreSQL nem prometem entrega/exatamente uma emissão.
 
 ## HTTP de pedidos
 

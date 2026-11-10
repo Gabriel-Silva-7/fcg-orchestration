@@ -10,7 +10,7 @@ aprovação humana ou submissão. Use os SHAs e imagens registrados na execuçã
 | Quatro serviços e repositórios independentes | 2–3 | [Tabela principal](../README.md), soluções e Dockerfile em cada repositório; [arquitetura](architecture.md) |
 | Cadastro, autenticação JWT e autorização | 3 | README Users; login real e permissões na [jornada integrada](compose.md) |
 | CRUD de jogos e início da compra | 3 | README Catalog; criação, edição, desativação e POST me/library no E2E |
-| Pagamento simulado | 3 | README Payments; Approved 44,93/Rejected600 sob limite 500 no E2E |
+| Pagamento simulado | 3 | README Payments; Approved 44,93/Rejected 600 sob limite 500 no E2E |
 | Boas-vindas e confirmação no console | 3–4 | README Notifications; intenção Sent acompanhada do log real no E2E |
 | Cadastro → UserCreatedEvent → Welcome | 3 | Cadastro HTTP real, transporte e console na jornada |
 | OrderPlacedEvent com UserId/GameId/Price | 3 | POST Catalog, outbox e consumo real Payments; [contratos](purchase-contracts.md) |
