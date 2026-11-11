@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: rabbitmq-data
+  namespace: ${NAMESPACE}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  namespace: ${NAMESPACE}
+spec:
+  selector: {app: rabbitmq}
+  ports:
+    - {name: amqp, port: 5672, targetPort: 5672}
+    - {name: management, port: 15672, targetPort: 15672}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+  namespace: ${NAMESPACE}
+spec:
+  replicas: 1
+  strategy: {type: Recreate}
+  selector:
+    matchLabels: {app: rabbitmq}
+  template:
+    metadata:
+      labels: {app: rabbitmq, app.kubernetes.io/part-of: fcg}
+      annotations:
+        io.fcg.render-id: ${RUN_ID}
+    spec:
+      hostname: rabbitmq
+      automountServiceAccountToken: false
+      securityContext: {seccompProfile: {type: RuntimeDefault}}
+      containers:
+        - name: rabbitmq
+          image: ${RABBITMQ_IMAGE}
+          imagePullPolicy: Never
+          envFrom:
+            - configMapRef: {name: ${CONFIG_NAME}}
+            - secretRef: {name: ${MQ_SECRET}}
+          ports:
+            - {name: amqp, containerPort: 5672}
+            - {name: management, containerPort: 15672}
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {cpu: "1", memory: 768Mi}
+          startupProbe:
+            exec: {command: [rabbitmq-diagnostics, -q, check_running]}
+            periodSeconds: 2
+            timeoutSeconds: 10
+            failureThreshold: 60
+          readinessProbe:
+            exec: {command: [rabbitmq-diagnostics, -q, check_running]}
+            periodSeconds: 5
+            timeoutSeconds: 10
+          livenessProbe:
+            exec: {command: [rabbitmq-diagnostics, -q, ping]}
+            periodSeconds: 10
+            timeoutSeconds: 10
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/rabbitmq}
+      volumes:
+        - name: data
+          persistentVolumeClaim: {claimName: rabbitmq-data}

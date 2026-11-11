@@ -1,0 +1,22 @@
+{
+  "kind": {
+    "version": "0.33.0",
+    "darwin-arm64": {
+      "url": "https://github.com/kubernetes-sigs/kind/releases/download/v0.33.0/kind-darwin-arm64",
+      "checksumUrl": "https://github.com/kubernetes-sigs/kind/releases/download/v0.33.0/kind-darwin-arm64.sha256sum",
+      "sha256": "0c8c7dbe5e23594a198b786c4bc13dacc101fa6196b0cb0b23a1ca44e61f4b4f"
+    }
+  },
+  "kubectl": {
+    "version": "1.37.0",
+    "darwin-arm64": {
+      "url": "https://dl.k8s.io/release/v1.37.0/bin/darwin/arm64/kubectl",
+      "checksumUrl": "https://dl.k8s.io/release/v1.37.0/bin/darwin/arm64/kubectl.sha256",
+      "sha256": "583beedaebe422e71d3f1a96acef8b1fef86ea2f09a45ad01aa6c9ce287c1380"
+    }
+  },
+  "node": "kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5",
+  "postgres": "postgres:16@sha256:f1c3376c26f2609ab9f29f71f824103fe2fcd8ee0346485cb6122a4f93df6f94",
+  "rabbitmq": "rabbitmq:4.3.6-management@sha256:54cb013d76cd1fd6c0a0708f34062ad61c452bb6f016b434c6c33f1a765d2b58",
+  "diagnostic": "busybox:1.37.0@sha256:bdf57e528e45e4433820e045b29b4597825a1c9e38353532d90a01445013f82e"
+}

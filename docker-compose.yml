@@ -1,0 +1,198 @@
+services:
+  postgres:
+    image: postgres:16@sha256:f1c3376c26f2609ab9f29f71f824103fe2fcd8ee0346485cb6122a4f93df6f94
+    entrypoint: ["/opt/fcg/postgres/entrypoint.sh"]
+    command: ["postgres"]
+    environment:
+      POSTGRES_USER: fcg_bootstrap
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      FCG_USERS_DB_PASSWORD: ${FCG_USERS_DB_PASSWORD:?FCG_USERS_DB_PASSWORD is required}
+      FCG_CATALOG_DB_PASSWORD: ${FCG_CATALOG_DB_PASSWORD:?FCG_CATALOG_DB_PASSWORD is required}
+      FCG_PAYMENTS_DB_PASSWORD: ${FCG_PAYMENTS_DB_PASSWORD:?FCG_PAYMENTS_DB_PASSWORD is required}
+      FCG_NOTIFICATIONS_DB_PASSWORD: ${FCG_NOTIFICATIONS_DB_PASSWORD:?FCG_NOTIFICATIONS_DB_PASSWORD is required}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/postgres:/opt/fcg/postgres:ro
+      - ./scripts/postgres/10-init.sh:/docker-entrypoint-initdb.d/10-fcg.sh:ro
+    healthcheck:
+      test: ["CMD", "/opt/fcg/postgres/healthcheck.sh"]
+      interval: 2s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+  rabbitmq:
+    image: rabbitmq:4.3.6-management@sha256:54cb013d76cd1fd6c0a0708f34062ad61c452bb6f016b434c6c33f1a765d2b58
+    hostname: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_BOOTSTRAP_USER:?RABBITMQ_BOOTSTRAP_USER is required}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_BOOTSTRAP_PASSWORD:?RABBITMQ_BOOTSTRAP_PASSWORD is required}
+      RABBITMQ_NODENAME: rabbit@rabbitmq
+      RABBITMQ_MNESIA_BASE: /var/lib/rabbitmq/mnesia
+    ports:
+      - "127.0.0.1:${RABBITMQ_PORT:-5672}:5672"
+      - "127.0.0.1:${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 2s
+      timeout: 10s
+      retries: 30
+      start_period: 10s
+  rabbitmq-bootstrap:
+    build:
+      context: .
+      dockerfile: scripts/rabbitmq/bootstrap/Dockerfile
+    restart: "no"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      RABBITMQ_MANAGEMENT_URL: http://rabbitmq:15672
+      RABBITMQ_BOOTSTRAP_TIMEOUT_SECONDS: ${RABBITMQ_BOOTSTRAP_TIMEOUT_SECONDS:-60}
+      RABBITMQ_BOOTSTRAP_USER: ${RABBITMQ_BOOTSTRAP_USER:?RABBITMQ_BOOTSTRAP_USER is required}
+      RABBITMQ_BOOTSTRAP_PASSWORD: ${RABBITMQ_BOOTSTRAP_PASSWORD:?RABBITMQ_BOOTSTRAP_PASSWORD is required}
+      FCG_USERS_RABBITMQ_USER: ${FCG_USERS_RABBITMQ_USER:?FCG_USERS_RABBITMQ_USER is required}
+      FCG_USERS_RABBITMQ_PASSWORD: ${FCG_USERS_RABBITMQ_PASSWORD:?FCG_USERS_RABBITMQ_PASSWORD is required}
+      FCG_CATALOG_RABBITMQ_USER: ${FCG_CATALOG_RABBITMQ_USER:?FCG_CATALOG_RABBITMQ_USER is required}
+      FCG_CATALOG_RABBITMQ_PASSWORD: ${FCG_CATALOG_RABBITMQ_PASSWORD:?FCG_CATALOG_RABBITMQ_PASSWORD is required}
+      FCG_PAYMENTS_RABBITMQ_USER: ${FCG_PAYMENTS_RABBITMQ_USER:?FCG_PAYMENTS_RABBITMQ_USER is required}
+      FCG_PAYMENTS_RABBITMQ_PASSWORD: ${FCG_PAYMENTS_RABBITMQ_PASSWORD:?FCG_PAYMENTS_RABBITMQ_PASSWORD is required}
+      FCG_NOTIFICATIONS_RABBITMQ_USER: ${FCG_NOTIFICATIONS_RABBITMQ_USER:?FCG_NOTIFICATIONS_RABBITMQ_USER is required}
+      FCG_NOTIFICATIONS_RABBITMQ_PASSWORD: ${FCG_NOTIFICATIONS_RABBITMQ_PASSWORD:?FCG_NOTIFICATIONS_RABBITMQ_PASSWORD is required}
+  users:
+    image: ${FCG_USERS_IMAGE:-fcg-users-api:local}
+    build:
+      context: ${FCG_USERS_SOURCE:-./.sources/users}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq-bootstrap:
+        condition: service_completed_successfully
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      PGGSSENCMODE: ${FCG_GSS_ENCRYPTION_MODE:-disable}
+      ConnectionStrings__Default: Host=postgres;Database=fcg_users;Username=fcg_users;Password=${FCG_USERS_DB_PASSWORD:?FCG_USERS_DB_PASSWORD is required};Timeout=5;Command Timeout=10
+      Database__MigrateOnStartup: "true"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: "5672"
+      RabbitMq__VirtualHost: /fcg
+      RabbitMq__Username: ${FCG_USERS_RABBITMQ_USER:?FCG_USERS_RABBITMQ_USER is required}
+      RabbitMq__Password: ${FCG_USERS_RABBITMQ_PASSWORD:?FCG_USERS_RABBITMQ_PASSWORD is required}
+      Jwt__Issuer: ${FCG_JWT_ISSUER:-fcg-users-api}
+      Jwt__Audience: ${FCG_JWT_AUDIENCE:-fcg-clients}
+      Jwt__Algorithm: RS256
+      Jwt__ExpirationMinutes: "15"
+      Jwt__ClockSkewSeconds: "0"
+      Jwt__PublicKeyPath: /run/secrets/public.pem
+      Swagger__Enabled: ${FCG_SWAGGER_ENABLED:-false}
+      Jwt__PrivateKeyPath: /run/secrets/private.pem
+      AdminBootstrap__Enabled: ${ADMIN_BOOTSTRAP_ENABLED:-false}
+      AdminBootstrap__Email: ${ADMIN_BOOTSTRAP_EMAIL:-}
+      AdminBootstrap__Password: ${ADMIN_BOOTSTRAP_PASSWORD:-}
+      AdminBootstrap__PlayerEmail: ${ADMIN_BOOTSTRAP_PLAYER_EMAIL:-}
+      AdminBootstrap__PlayerPassword: ${ADMIN_BOOTSTRAP_PLAYER_PASSWORD:-}
+    volumes:
+      - type: bind
+        source: ${FCG_JWT_PUBLIC_KEY_PATH:-./.local/demo/public.pem}
+        target: /run/secrets/public.pem
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${FCG_JWT_PRIVATE_KEY_PATH:-./.local/demo/private.pem}
+        target: /run/secrets/private.pem
+        read_only: true
+        bind:
+          create_host_path: false
+    ports:
+      - "127.0.0.1:${FCG_USERS_PORT:-8081}:8080"
+
+  catalog:
+    image: ${FCG_CATALOG_IMAGE:-fcg-catalog-api:local}
+    build:
+      context: ${FCG_CATALOG_SOURCE:-./.sources/catalog}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq-bootstrap:
+        condition: service_completed_successfully
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      PGGSSENCMODE: ${FCG_GSS_ENCRYPTION_MODE:-disable}
+      ConnectionStrings__Default: Host=postgres;Database=fcg_catalog;Username=fcg_catalog;Password=${FCG_CATALOG_DB_PASSWORD:?FCG_CATALOG_DB_PASSWORD is required};Timeout=5;Command Timeout=10
+      Database__MigrateOnStartup: "true"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: "5672"
+      RabbitMq__VirtualHost: /fcg
+      RabbitMq__Username: ${FCG_CATALOG_RABBITMQ_USER:?FCG_CATALOG_RABBITMQ_USER is required}
+      RabbitMq__Password: ${FCG_CATALOG_RABBITMQ_PASSWORD:?FCG_CATALOG_RABBITMQ_PASSWORD is required}
+      Jwt__Issuer: ${FCG_JWT_ISSUER:-fcg-users-api}
+      Jwt__Audience: ${FCG_JWT_AUDIENCE:-fcg-clients}
+      Jwt__Algorithm: RS256
+      Jwt__ExpirationMinutes: "15"
+      Jwt__ClockSkewSeconds: "0"
+      Jwt__PublicKeyPath: /run/secrets/public.pem
+      Swagger__Enabled: ${FCG_SWAGGER_ENABLED:-false}
+    volumes:
+      - type: bind
+        source: ${FCG_JWT_PUBLIC_KEY_PATH:-./.local/demo/public.pem}
+        target: /run/secrets/public.pem
+        read_only: true
+        bind:
+          create_host_path: false
+    ports:
+      - "127.0.0.1:${FCG_CATALOG_PORT:-8082}:8080"
+
+  payments:
+    image: ${FCG_PAYMENTS_IMAGE:-fcg-payments-api:local}
+    build:
+      context: ${FCG_PAYMENTS_SOURCE:-./.sources/payments}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq-bootstrap:
+        condition: service_completed_successfully
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      PGGSSENCMODE: ${FCG_GSS_ENCRYPTION_MODE:-disable}
+      ConnectionStrings__Default: Host=postgres;Database=fcg_payments;Username=fcg_payments;Password=${FCG_PAYMENTS_DB_PASSWORD:?FCG_PAYMENTS_DB_PASSWORD is required};Timeout=5;Command Timeout=10
+      Database__MigrateOnStartup: "true"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: "5672"
+      RabbitMq__VirtualHost: /fcg
+      RabbitMq__Username: ${FCG_PAYMENTS_RABBITMQ_USER:?FCG_PAYMENTS_RABBITMQ_USER is required}
+      RabbitMq__Password: ${FCG_PAYMENTS_RABBITMQ_PASSWORD:?FCG_PAYMENTS_RABBITMQ_PASSWORD is required}
+      PaymentSimulation__ApprovalLimit: ${PAYMENT_APPROVAL_LIMIT:-500.00}
+      PaymentSimulation__Delay: ${PAYMENT_DELAY:-00:00:02}
+    ports:
+      - "127.0.0.1:${FCG_PAYMENTS_PORT:-8083}:8080"
+
+  notifications:
+    image: ${FCG_NOTIFICATIONS_IMAGE:-fcg-notifications-api:local}
+    build:
+      context: ${FCG_NOTIFICATIONS_SOURCE:-./.sources/notifications}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq-bootstrap:
+        condition: service_completed_successfully
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      PGGSSENCMODE: ${FCG_GSS_ENCRYPTION_MODE:-disable}
+      ConnectionStrings__Default: Host=postgres;Database=fcg_notifications;Username=fcg_notifications;Password=${FCG_NOTIFICATIONS_DB_PASSWORD:?FCG_NOTIFICATIONS_DB_PASSWORD is required};Timeout=5;Command Timeout=10
+      Database__MigrateOnStartup: "true"
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Port: "5672"
+      RabbitMq__VirtualHost: /fcg
+      RabbitMq__Username: ${FCG_NOTIFICATIONS_RABBITMQ_USER:?FCG_NOTIFICATIONS_RABBITMQ_USER is required}
+      RabbitMq__Password: ${FCG_NOTIFICATIONS_RABBITMQ_PASSWORD:?FCG_NOTIFICATIONS_RABBITMQ_PASSWORD is required}
+    ports:
+      - "127.0.0.1:${FCG_NOTIFICATIONS_PORT:-8084}:8080"
+
+volumes:
+  postgres_data:
+  rabbitmq_data:

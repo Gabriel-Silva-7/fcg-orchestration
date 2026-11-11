@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ${CONFIG_NAME}
+  namespace: ${NAMESPACE}
+data:
+  POSTGRES_USER: fcg_bootstrap
+  POSTGRES_DB: postgres
+  PGDATA: /var/lib/postgresql/data/pgdata
+  RABBITMQ_DEFAULT_USER: ${MQ_ADMIN_USER}
+  RABBITMQ_NODENAME: rabbit@rabbitmq
+  RABBITMQ_MNESIA_BASE: /var/lib/rabbitmq/mnesia
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ${SCRIPTS_NAME}
+  namespace: ${NAMESPACE}
+data:
+  entrypoint.sh: ${PG_ENTRYPOINT}
+  healthcheck.sh: ${PG_HEALTHCHECK}
+  10-init.sh: ${PG_INIT}

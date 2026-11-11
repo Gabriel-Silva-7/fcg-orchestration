@@ -1,0 +1,15 @@
+.git
+**/bin
+**/obj
+**/__pycache__
+.env
+.env.*
+tests
+
+.local
+.sources
+.tools
+.worktrees
+docs/fase-2
+**/*.pem
+**/kubeconfig
